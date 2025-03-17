@@ -25,7 +25,6 @@
 *.ltx
 *.xci
 *.dcp
-*.xdc
 *.xsa
 *.xise
 *.ngc
@@ -44,6 +43,9 @@
 *.qpf
 *.qsf
 *.qws
+*.wdf
+*.lpr
+
 
 # Vivado project directories
 .sim/
