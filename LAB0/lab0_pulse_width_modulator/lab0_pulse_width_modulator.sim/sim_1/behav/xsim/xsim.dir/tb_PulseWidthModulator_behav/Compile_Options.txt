@@ -1,1 +1,0 @@
--wto "5e30cf21c5094cb99e69e33f328f026e" --incr --debug "typical" --relax --mt "2" -L "xil_defaultlib" -L "secureip" --snapshot "tb_PulseWidthModulator_behav" "xil_defaultlib.tb_PulseWidthModulator" -log "elaborate.log" 

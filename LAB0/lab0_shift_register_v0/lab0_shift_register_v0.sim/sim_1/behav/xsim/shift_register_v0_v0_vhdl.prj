@@ -1,6 +1,0 @@
-# compile vhdl design source files
-vhdl xil_defaultlib  \
-"../../../../lab_0_shift_register.srcs/sources_1/new/shift_register_v0.vhd" \
-
-# Do not sort compile order
-nosort
