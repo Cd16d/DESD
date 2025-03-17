@@ -48,21 +48,23 @@
 
 
 # Vivado project directories
-.sim/
-.cache/
-.hw/
+*.sim/
+*.cache/
+*.hw/
 .hwdbg/
-.ip_user_files/
+*.ip_user_files/
 .webtalk/
 .xsim/
 .xil/
 .xilinx/
+*.runs/
 .xtclsh_history
 .fpga_editor.log
 .fpga_editor.jou
 vivado_pid*.str
 vivado*.backup.jou
 vivado*.backup.log
+
 
 # SDK workspace
 .sdk/
