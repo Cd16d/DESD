@@ -1,0 +1,66 @@
+# Vivado-specific files and directories to ignore
+
+# Vivado temporary files
+*.jou
+*.log
+*.str
+*.pb
+*.wdb
+*.xpr
+*.xpa
+*.backup.*
+
+# Simulation and synthesis-generated files
+*.bit
+*.bin
+*.elf
+*.mcs
+*.mem
+*.prm
+*.tsi
+*.vcd
+*.vdi
+*.xml
+*.tcl
+*.ltx
+*.xci
+*.dcp
+*.xdc
+*.xsa
+*.xise
+*.ngc
+*.ngd
+*.ncd
+*.bgn
+*.blf
+*.unroutes
+*.rpx
+*.par
+*.twr
+*.twx
+*.ptwx
+*.mrp
+*.pcf
+*.qpf
+*.qsf
+*.qws
+
+# Vivado project directories
+.sim/
+.cache/
+.hw/
+.hwdbg/
+.ip_user_files/
+.webtalk/
+.xsim/
+.xil/
+.xilinx/
+.xtclsh_history
+.fpga_editor.log
+.fpga_editor.jou
+vivado_pid*.str
+vivado*.backup.jou
+vivado*.backup.log
+
+# SDK workspace
+.sdk/
