@@ -1,3 +1,7 @@
+-- File:            KittCar_v0.vhd
+-- Description:     This file implements the KittCar entity
+-- Known problem:   The counter is not working properly
+
 ---------- DEFAULT LIBRARY ---------
 LIBRARY IEEE;
 USE IEEE.STD_LOGIC_1164.ALL;
