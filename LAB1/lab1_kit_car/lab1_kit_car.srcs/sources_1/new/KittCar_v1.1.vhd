@@ -34,25 +34,30 @@ ENTITY KittCar IS
 END KittCar;
 
 ARCHITECTURE Behavioral OF KittCar IS
-    CONSTANT MIN_KITT_CAR_STEP_NS : UNSIGNED(63 DOWNTO 0) := to_unsigned(MIN_KITT_CAR_STEP_MS * 1000000, 64); -- 64bits is more than needed, just for test purposes (47 bits are enough)
+    CONSTANT MIN_KITT_CAR_STEP_NS : UNSIGNED(46 DOWNTO 0) := to_unsigned(MIN_KITT_CAR_STEP_MS * 1000000, 47);
 
     SIGNAL leds_sr : STD_LOGIC_VECTOR(led'RANGE) := (OTHERS => '0');
-    SIGNAL n_period : UNSIGNED(sw'RANGE) := 1;
+    SIGNAL n_period : UNSIGNED(sw'RANGE) := to_unsigned(1, sw'LENGTH);
     SIGNAL up : STD_LOGIC := '1';
 BEGIN
 
     -- Sincronous logic
     PROCESS (clk, reset)
-        VARIABLE counter : UNSIGNED(63 DOWNTO 0) := (OTHERS => '0'); -- 64bits is more than needed, just for test purposes (47 bits are enough)
+        VARIABLE counter : UNSIGNED(46 DOWNTO 0) := (OTHERS => '0');
     BEGIN
         IF reset = '1' THEN
             leds_sr <= (OTHERS => '0');
             counter := (OTHERS => '0');
         ELSIF rising_edge(clk) THEN
 
-            -- Reset the leds
+            -- Kitt logic
             IF unsigned(leds_sr) = 0 THEN
                 leds_sr(0) <= '1';
+                up <= '1';
+            ELSIF leds_sr(led'HIGH) = '1' THEN
+                up <= '0';
+            ELSIF leds_sr(led'LOW) = '1' THEN
+                up <= '1';
             END IF;
 
             -- Increment the counter
@@ -71,16 +76,6 @@ BEGIN
                 -- Reset the counter
                 counter := (OTHERS => '0');
             END IF;
-        END IF;
-    END PROCESS;
-
-    -- Kitt logic
-    PROCESS (leds_sr)
-    BEGIN
-        IF leds_sr(led'HIGH) = '1' THEN
-            up <= '0';
-        ELSIF leds_sr(led'LOW) = '1' THEN
-            up <= '1';
         END IF;
     END PROCESS;
 

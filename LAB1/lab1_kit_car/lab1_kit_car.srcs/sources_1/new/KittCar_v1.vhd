@@ -50,9 +50,14 @@ BEGIN
             counter := (OTHERS => '0');
         ELSIF rising_edge(clk) THEN
 
-            -- Reset the leds
+            -- Kitt logic
             IF unsigned(leds_sr) = 0 THEN
                 leds_sr(0) <= '1';
+                up <= '1';
+            ELSIF leds_sr(led'HIGH) = '1' THEN
+                up <= '0';
+            ELSIF leds_sr(led'LOW) = '1' THEN
+                up <= '1';
             END IF;
 
             -- Increment the counter
@@ -71,16 +76,6 @@ BEGIN
                 -- Reset the counter
                 counter := (OTHERS => '0');
             END IF;
-        END IF;
-    END PROCESS;
-
-    -- Kitt logic
-    PROCESS (leds_sr)
-    BEGIN
-        IF leds_sr(led'HIGH) = '1' THEN
-            up <= '0';
-        ELSIF leds_sr(led'LOW) = '1' THEN
-            up <= '1';
         END IF;
     END PROCESS;
 

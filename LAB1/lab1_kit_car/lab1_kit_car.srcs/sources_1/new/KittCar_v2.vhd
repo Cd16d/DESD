@@ -1,5 +1,5 @@
 -- File:            KittCar_v2.vhd
--- Description:     Counter prescaler
+-- Description:     Counter prescaler & unsigned n_period
 -- Known problem:   Not yet tested
 
 ---------- DEFAULT LIBRARY ---------
@@ -35,35 +35,40 @@ END KittCar;
 
 ARCHITECTURE Behavioral OF KittCar IS
     SIGNAL leds_sr : STD_LOGIC_VECTOR(led'RANGE) := (OTHERS => '0');
-    SIGNAL n_period : POSITIVE RANGE 1 TO (2 ** NUM_OF_SWS) := 1;
+    SIGNAL n_period : UNSIGNED(sw'RANGE) := to_unsigned(1, sw'LENGTH);
     SIGNAL up : STD_LOGIC := '1';
 BEGIN
 
     -- Sincronous logic
     PROCESS (clk, reset)
-        VARIABLE counter_ns : INTEGER := 0;
-        VARIABLE counter_ms : INTEGER := 0;
+        VARIABLE counter_ns : UNSIGNED(19 DOWNTO 0) := (OTHERS => '0'); -- 20-bit counter for nanoseconds
+        VARIABLE counter_ms : UNSIGNED(26 DOWNTO 0) := (OTHERS => '0'); -- 27-bit counter for milliseconds
     BEGIN
         IF reset = '1' THEN
             leds_sr <= (OTHERS => '0');
-            counter_ns := 0;
-            counter_ms := 0;
+            counter_ns := (OTHERS => '0');
+            counter_ms := (OTHERS => '0');
         ELSIF rising_edge(clk) THEN
 
-            -- Reset the leds
+            -- Kitt logic
             IF unsigned(leds_sr) = 0 THEN
                 leds_sr(0) <= '1';
+                up <= '1';
+            ELSIF leds_sr(led'HIGH) = '1' THEN
+                up <= '0';
+            ELSIF leds_sr(led'LOW) = '1' THEN
+                up <= '1';
             END IF;
 
             -- Handle counters
-            counter_ns := counter_ns + CLK_PERIOD_NS;
-            IF counter_ns >= 1000000 THEN
+            counter_ns := counter_ns + to_unsigned(CLK_PERIOD_NS, counter_ns'LENGTH);
+            IF counter_ns >= to_unsigned(1000000, counter_ns'LENGTH) THEN
                 counter_ms := counter_ms + 1;
-                counter_ns := 0;
+                counter_ns := (OTHERS => '0');
             END IF;
 
             -- Calculate the number of periods
-            IF counter_ms >= (MIN_KITT_CAR_STEP_MS * n_period) THEN
+            IF counter_ms >= to_unsigned(MIN_KITT_CAR_STEP_MS, counter_ms'LENGTH) * n_period THEN
 
                 -- Shift the leds
                 IF up = '1' THEN
@@ -73,25 +78,15 @@ BEGIN
                 END IF;
 
                 -- Reset the counter
-                counter_ms := 0;
+                counter_ms := (OTHERS => '0');
             END IF;
-        END IF;
-    END PROCESS;
-
-    -- Kitt logic
-    PROCESS (leds_sr)
-    BEGIN
-        IF leds_sr(led'HIGH) = '1' THEN
-            up <= '0';
-        ELSIF leds_sr(led'LOW) = '1' THEN
-            up <= '1';
         END IF;
     END PROCESS;
 
     -- Handle the switch
     PROCESS (sw)
     BEGIN
-        n_period <= to_integer(unsigned(sw)) + 1;
+        n_period <= unsigned(sw) + 1;
     END PROCESS;
 
     led <= leds_sr;
