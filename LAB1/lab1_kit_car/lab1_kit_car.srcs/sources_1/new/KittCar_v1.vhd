@@ -1,6 +1,6 @@
 -- File:            KittCar_v1.vhd
--- Description:     Better asyncronous logic handling
--- Known problem:   The counter is not working properly
+-- Description:     Better asyncronous logic handling & unsigned n_period
+-- Known problem:   Not yet tested
 
 ---------- DEFAULT LIBRARY ---------
 LIBRARY IEEE;
@@ -34,16 +34,16 @@ ENTITY KittCar IS
 END KittCar;
 
 ARCHITECTURE Behavioral OF KittCar IS
-    CONSTANT MIN_KITT_CAR_STEP_NS : UNSIGNED(63 DOWNTO 0) := to_unsigned(MIN_KITT_CAR_STEP_MS * 1000000, 64);
+    CONSTANT MIN_KITT_CAR_STEP_NS : UNSIGNED(46 DOWNTO 0) := to_unsigned(MIN_KITT_CAR_STEP_MS * 1000000, 47);
 
     SIGNAL leds_sr : STD_LOGIC_VECTOR(led'RANGE) := (OTHERS => '0');
-    SIGNAL n_period : POSITIVE RANGE 1 TO (2 ** NUM_OF_SWS) := 1;
+    SIGNAL n_period : UNSIGNED(sw'RANGE) := to_unsigned(1, sw'LENGTH);
     SIGNAL up : STD_LOGIC := '1';
 BEGIN
 
     -- Sincronous logic
     PROCESS (clk, reset)
-        VARIABLE counter : UNSIGNED(63 DOWNTO 0) := (OTHERS => '0');
+        VARIABLE counter : UNSIGNED(46 DOWNTO 0) := (OTHERS => '0');
     BEGIN
         IF reset = '1' THEN
             leds_sr <= (OTHERS => '0');
@@ -82,7 +82,7 @@ BEGIN
     -- Handle the switch
     PROCESS (sw)
     BEGIN
-        n_period <= to_integer(unsigned(sw)) + 1;
+        n_period <= unsigned(sw) + 1;
     END PROCESS;
 
     led <= leds_sr;
