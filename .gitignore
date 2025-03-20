@@ -50,6 +50,7 @@
 *.sim/
 *.cache/
 *.hw/
+*.srcs/
 .hwdbg/
 *.ip_user_files/
 .webtalk/

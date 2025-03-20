@@ -21,8 +21,12 @@ The course focuses on:
 - Implement and test **VHDL architectures** using Vivado and Basys 3  
 - Learn about **FPGA timing, power, I/O, and memory management**  
 
-<!-- ## 📂 Repository Structure  
-This section outlines the organization of the repository, including directories for source files, simulations, and documentation. -->
+## 📂 Repository Structure
+- `LABx/`
+  - `src/`: VHDL source files  
+  - `sim/`: Simulation files  
+  - `cons/`: Constraint files  
+  - `vivado/`: Vivado project files 
 
 ## 📬 Contact  
 For any questions or issues open an issue in this repository.
