@@ -1,7 +1,3 @@
--- File:            KittCar_v1.vhd
--- Description:     Better asyncronous logic handling & unsigned n_period
--- Known problem:   Not yet tested
-
 ---------- DEFAULT LIBRARY ---------
 LIBRARY IEEE;
 USE IEEE.STD_LOGIC_1164.ALL;
@@ -37,7 +33,7 @@ ARCHITECTURE Behavioral OF KittCar IS
     CONSTANT MIN_KITT_CAR_STEP_NS : UNSIGNED(46 DOWNTO 0) := to_unsigned(MIN_KITT_CAR_STEP_MS * 1000000, 47);
 
     SIGNAL leds_sr : STD_LOGIC_VECTOR(led'RANGE) := (OTHERS => '0');
-    SIGNAL n_period : UNSIGNED(sw'RANGE) := to_unsigned(1, sw'LENGTH);
+    SIGNAL n_period : UNSIGNED(NUM_OF_SWS DOWNTO 0) := to_unsigned(1, NUM_OF_SWS + 1);
     SIGNAL up : STD_LOGIC := '1';
 BEGIN
 
@@ -82,7 +78,7 @@ BEGIN
     -- Handle the switch
     PROCESS (sw)
     BEGIN
-        n_period <= unsigned(sw) + 1;
+        n_period <= unsigned('0' & sw) + 1;
     END PROCESS;
 
     led <= leds_sr;
