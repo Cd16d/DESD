@@ -86,12 +86,13 @@ BEGIN
             leds_sr <= (OTHERS => 0);
             led_sig <= (OTHERS => '0');
             counter := (OTHERS => '0');
+            up <= '1';
         ELSIF rising_edge(clk) THEN
 
-            -- Kitt logic
-            IF leds_sr(TAIL_LENGTH - 1) = 15 THEN
+            -- Kitt logic: Update direction
+            IF leds_sr(TAIL_LENGTH - 1) = led'high THEN
                 up <= '0';
-            ELSIF leds_sr(TAIL_LENGTH - 1) = 0 THEN
+            ELSIF leds_sr(TAIL_LENGTH - 1) = led'low THEN
                 up <= '1';
             END IF;
 
@@ -101,17 +102,17 @@ BEGIN
             -- Calculate the number of periods
             IF counter >= (MIN_KITT_CAR_STEP_NS * n_period) THEN
 
-                -- Shift the leds
-                IF up = '1' THEN
-                    leds_sr <= (leds_sr(TAIL_LENGTH - 1) + 1) & leds_sr(TAIL_LENGTH - 2 DOWNTO 0);
-                ELSIF up = '0' THEN
-                    leds_sr <= (leds_sr(TAIL_LENGTH - 1) - 1) & leds_sr(TAIL_LENGTH - 2 DOWNTO 0);
-                END IF;
-
-                -- Reset leg_sig
+                -- Reset led_sig
                 led_sig <= (OTHERS => '0');
 
-                -- Assign the leds
+                -- Shift the leds
+                IF up = '1' THEN
+                    leds_sr <= (leds_sr(TAIL_LENGTH - 1) + 1) & leds_sr(TAIL_LENGTH - 1 DOWNTO 1);
+                ELSE
+                    leds_sr <= (leds_sr(TAIL_LENGTH - 1) - 1) & leds_sr(TAIL_LENGTH - 1 DOWNTO 1);
+                END IF;
+
+                -- Assign the LEDs
                 FOR i IN 0 TO TAIL_LENGTH - 1 LOOP
                     led_sig(leds_sr(i)) <= leds_pwm(i);
                 END LOOP;
