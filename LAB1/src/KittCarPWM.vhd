@@ -55,7 +55,9 @@ ARCHITECTURE Behavioral OF KittCarPWM IS
 BEGIN
 
     -- Instantiate the PWM modules
-    PWM : FOR i IN 1 TO TAIL_LENGTH GENERATE
+    pwms(pwms'HIGH) <= '1'; -- First LED always on
+
+    PWM : FOR i IN 1 TO TAIL_LENGTH - 1 GENERATE
     BEGIN
         PWM : PulseWidthModulator
         GENERIC MAP(
