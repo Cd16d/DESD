@@ -33,27 +33,30 @@ ARCHITECTURE Behavioral OF KittCar IS
     CONSTANT MIN_KITT_CAR_STEP_NS : UNSIGNED(46 DOWNTO 0) := to_unsigned(MIN_KITT_CAR_STEP_MS * 1000000, 47);
 
     SIGNAL leds_sr : STD_LOGIC_VECTOR(led'RANGE) := (OTHERS => '0');
-    SIGNAL n_period : UNSIGNED(NUM_OF_SWS DOWNTO 0) := to_unsigned(1, NUM_OF_SWS + 1);
-    SIGNAL up : STD_LOGIC := '1';
 BEGIN
 
     -- Sincronous logic
     PROCESS (clk, reset)
         VARIABLE counter : UNSIGNED(46 DOWNTO 0) := (OTHERS => '0');
+        VARIABLE n_period : UNSIGNED(NUM_OF_SWS DOWNTO 0) := to_unsigned(1, NUM_OF_SWS + 1);
+        VARIABLE up : STD_LOGIC := '1';
     BEGIN
         IF reset = '1' THEN
             leds_sr <= (OTHERS => '0');
             counter := (OTHERS => '0');
         ELSIF rising_edge(clk) THEN
 
+            -- Handle the switch
+            n_period := unsigned('0' & sw) + 1;
+
             -- Kitt logic
             IF unsigned(leds_sr) = 0 THEN
                 leds_sr(0) <= '1';
-                up <= '1';
+                up := '1';
             ELSIF leds_sr(led'HIGH) = '1' THEN
-                up <= '0';
+                up := '0';
             ELSIF leds_sr(led'LOW) = '1' THEN
-                up <= '1';
+                up := '1';
             END IF;
 
             -- Increment the counter
@@ -73,12 +76,6 @@ BEGIN
                 counter := (OTHERS => '0');
             END IF;
         END IF;
-    END PROCESS;
-
-    -- Handle the switch
-    PROCESS (sw)
-    BEGIN
-        n_period <= unsigned('0' & sw) + 1;
     END PROCESS;
 
     led <= leds_sr;

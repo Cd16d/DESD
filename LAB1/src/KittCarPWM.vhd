@@ -32,10 +32,7 @@ END KittCarPWM;
 ARCHITECTURE Behavioral OF KittCarPWM IS
     COMPONENT PulseWidthModulator
         GENERIC (
-            BIT_LENGTH : INTEGER RANGE 1 TO 16;
-            T_ON_INIT : POSITIVE;
-            PERIOD_INIT : POSITIVE;
-            PWM_INIT : STD_LOGIC
+            BIT_LENGTH : INTEGER
         );
         PORT (
             reset : IN STD_LOGIC;
@@ -47,88 +44,79 @@ ARCHITECTURE Behavioral OF KittCarPWM IS
         );
     END COMPONENT;
 
-    TYPE led_reg IS ARRAY (TAIL_LENGTH - 1 DOWNTO 0) OF INTEGER RANGE 0 TO led'HIGH;
-
+    TYPE leds_sr_type IS ARRAY (TAIL_LENGTH - 1 DOWNTO 0) OF INTEGER RANGE led'LOW TO led'HIGH;
+    
     CONSTANT MIN_KITT_CAR_STEP_NS : UNSIGNED(46 DOWNTO 0) := to_unsigned(MIN_KITT_CAR_STEP_MS * 1000000, 47);
-    CONSTANT BIT_LENGTH : INTEGER RANGE 1 TO 16 := 8;
+    CONSTANT BIT_LENGTH : INTEGER := 5;
 
-    SIGNAL leds_sr : led_reg := (OTHERS => 0);
-    SIGNAL leds_pwm : STD_LOGIC_VECTOR(TAIL_LENGTH - 1 DOWNTO 0) := (OTHERS => '0');
-    SIGNAL led_sig : STD_LOGIC_VECTOR(NUM_OF_LEDS - 1 DOWNTO 0) := (OTHERS => '0');
-    SIGNAL n_period : UNSIGNED(NUM_OF_SWS DOWNTO 0) := to_unsigned(1, NUM_OF_SWS + 1);
-    SIGNAL up : STD_LOGIC := '1';
+    SIGNAL pwms : STD_LOGIC_VECTOR(TAIL_LENGTH - 1 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL leds_sig : STD_LOGIC_VECTOR(NUM_OF_LEDS - 1 DOWNTO 0) := (OTHERS => '0');
+
 BEGIN
 
-    -- Instantiate the PWM
+    -- Instantiate the PWM modules
     PWM : FOR i IN 1 TO TAIL_LENGTH GENERATE
     BEGIN
         PWM : PulseWidthModulator
         GENERIC MAP(
-            BIT_LENGTH => BIT_LENGTH,
-            T_ON_INIT => 64,
-            PERIOD_INIT => 128,
-            PWM_INIT => '0'
+            BIT_LENGTH => BIT_LENGTH
         )
         PORT MAP(
             reset => reset,
             clk => clk,
             Ton => STD_LOGIC_VECTOR(to_unsigned(i, BIT_LENGTH)),
             Period => STD_LOGIC_VECTOR(to_unsigned(TAIL_LENGTH - 1, BIT_LENGTH)),
-            PWM => leds_pwm(i - 1)
+            PWM => pwms(i - 1)
         );
     END GENERATE;
 
-    -- Sincronous logic
+    -- Synchronous logic for LED control
     PROCESS (clk, reset)
-        VARIABLE counter : UNSIGNED(46 DOWNTO 0) := (OTHERS => '0');
+        VARIABLE up : STD_LOGIC := '1'; -- Direction of LED movement
+        VARIABLE leds_sr : leds_sr_type := (OTHERS => 0); -- Shift register for LED positions
+        VARIABLE counter : UNSIGNED(46 DOWNTO 0) := (OTHERS => '0'); -- Timing counter
+        VARIABLE n_period : UNSIGNED(NUM_OF_SWS DOWNTO 0) := to_unsigned(1, NUM_OF_SWS + 1); -- Period multiplier
     BEGIN
         IF reset = '1' THEN
-            leds_sr <= (OTHERS => 0);
-            led_sig <= (OTHERS => '0');
-            counter := (OTHERS => '0');
-            up <= '1';
+            leds_sig <= (OTHERS => '0'); -- Turn off all LEDs
+            leds_sr := (OTHERS => 0); -- Reset shift register
+            counter := (OTHERS => '0'); -- Reset counter
+            up := '1'; -- Set initial direction
         ELSIF rising_edge(clk) THEN
+            -- Update period multiplier based on switches
+            n_period := unsigned('0' & sw) + 1;
 
-            -- Kitt logic: Update direction
-            IF leds_sr(TAIL_LENGTH - 1) = led'high THEN
-                up <= '0';
-            ELSIF leds_sr(TAIL_LENGTH - 1) = led'low THEN
-                up <= '1';
-            END IF;
-
-            -- Increment the counter
+            -- Increment counter
             counter := counter + to_unsigned(CLK_PERIOD_NS, counter'LENGTH);
 
-            -- Calculate the number of periods
+            -- Check if counter exceeds threshold
             IF counter >= (MIN_KITT_CAR_STEP_NS * n_period) THEN
-
-                -- Reset led_sig
-                led_sig <= (OTHERS => '0');
-
-                -- Shift the leds
-                IF up = '1' THEN
-                    leds_sr <= (leds_sr(TAIL_LENGTH - 1) + 1) & leds_sr(TAIL_LENGTH - 1 DOWNTO 1);
-                ELSE
-                    leds_sr <= (leds_sr(TAIL_LENGTH - 1) - 1) & leds_sr(TAIL_LENGTH - 1 DOWNTO 1);
+                -- Update direction
+                IF leds_sr(leds_sr'HIGH) = led'high THEN
+                    up := '0'; -- Change to backward
+                ELSIF leds_sr(leds_sr'HIGH) = led'low THEN
+                    up := '1'; -- Change to forward
                 END IF;
 
-                -- Assign the LEDs
-                FOR i IN 0 TO TAIL_LENGTH - 1 LOOP
-                    led_sig(leds_sr(i)) <= leds_pwm(i);
-                END LOOP;
+                -- Shift LEDs based on direction
+                IF up = '1' THEN
+                    leds_sr := (leds_sr(leds_sr'HIGH) + 1) & leds_sr(leds_sr'HIGH DOWNTO 1);
+                ELSE
+                    leds_sr := (leds_sr(leds_sr'HIGH) - 1) & leds_sr(leds_sr'HIGH DOWNTO 1);
+                END IF;
 
-                -- Reset the counter
-                counter := (OTHERS => '0');
+                counter := (OTHERS => '0'); -- Reset counter
             END IF;
+
+            -- Assign PWM signals to LEDs
+            leds_sig <= (OTHERS => '0');
+            FOR i IN leds_sr'REVERSE_RANGE LOOP
+                leds_sig(leds_sr(i)) <= pwms(i);
+            END LOOP;
         END IF;
     END PROCESS;
 
-    -- Handle the switch
-    PROCESS (sw)
-    BEGIN
-        n_period <= unsigned('0' & sw) + 1;
-    END PROCESS;
-
-    led <= led_sig;
+    -- Assign LED signals to output
+    led <= leds_sig;
 
 END Behavioral;

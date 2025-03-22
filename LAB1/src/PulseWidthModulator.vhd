@@ -33,10 +33,7 @@ use IEEE.NUMERIC_STD.ALL;
 
 entity PulseWidthModulator is
     Generic(
-        BIT_LENGTH  : INTEGER RANGE 1 to 16 := 8;
-        T_ON_INIT   : POSITIVE := 64;   
-        PERIOD_INIT : POSITIVE := 128;             
-        PWM_INIT    : STD_LOGIC := '0'
+        BIT_LENGTH  : INTEGER RANGE 1 to 16 := 8            
     );
     Port (
         reset   : IN STD_LOGIC;
