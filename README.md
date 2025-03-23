@@ -40,7 +40,7 @@ To get started with this project, follow these steps:
    ```
 3. Clone the repository using Git:  
    ```cmd
-   git clone https://git.cdtech.duckdns.org/Davide/DESD.git
+   git clone https://git.cdtech.duckdns.org/PickleRick/DESD.git
    ```
    This will create a folder named `DESD` in `C:\`.  
 
