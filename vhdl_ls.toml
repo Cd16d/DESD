@@ -4,6 +4,7 @@ enable = true
 [files]
 # Specify base directories for all projects
 library_dirs = [
+    "C:/DESD/LAB0/src",
     "C:/DESD/LAB1/src",
     "C:/DESD/LAB2/src",
     "C:/DESD/LAB3/src"
