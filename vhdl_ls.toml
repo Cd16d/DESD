@@ -11,6 +11,10 @@ library_dirs = [
 
 [libraries]
 # Assign separate libraries for each project
+lab0_lib.files = [
+    "C:/DESD/LAB0/src/**/*.vhd"
+]
+
 lab1_lib.files = [
     "C:/DESD/LAB1/src/**/*.vhd"
 ]
