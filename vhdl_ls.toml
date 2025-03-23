@@ -4,28 +4,32 @@ enable = true
 [files]
 # Specify base directories for all projects
 library_dirs = [
-    "C:/DESD/LAB0/src",
-    "C:/DESD/LAB1/src",
-    "C:/DESD/LAB2/src",
-    "C:/DESD/LAB3/src"
+    "C:/DESD/LAB0/",
+    "C:/DESD/LAB1/",
+    "C:/DESD/LAB2/",
+    "C:/DESD/LAB3/"
 ]
 
 [libraries]
 # Assign separate libraries for each project
 lab0_lib.files = [
-    "C:/DESD/LAB0/src/**/*.vhd"
+    "C:/DESD/LAB0/src/**/*.vhd",
+    "C:/DESD/LAB0/sim/**/*.vhd"
 ]
 
 lab1_lib.files = [
-    "C:/DESD/LAB1/src/**/*.vhd"
+    "C:/DESD/LAB1/src/**/*.vhd",
+    "C:/DESD/LAB1/sim/**/*.vhd"
 ]
 
 # lab2_lib.files = [
-#     "C:/DESD/LAB2/src/**/*.vhd"
+#     "C:/DESD/LAB2/src/**/*.vhd",
+#     "C:/DESD/LAB2/sim/**/*.vhd"
 # ]
 
 # lab3_lib.files = [
-#     "C:/DESD/LAB3/src/**/*.vhd"
+#     "C:/DESD/LAB3/src/**/*.vhd",
+#     "C:/DESD/LAB3/sim/**/*.vhd"
 # ]
 
 [analyses]

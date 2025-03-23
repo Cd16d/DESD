@@ -9,9 +9,8 @@ ARCHITECTURE testbench OF tb_KittCarPWM IS
     -- Test constants
     CONSTANT CLK_PERIOD : TIME := 10 ns;
     CONSTANT RESET_TIME : TIME := 10*CLK_PERIOD;
-    CONSTANT TEST_DURATION : TIME := 10000 ms;
 
-    CONSTANT PERIOD : TIME := 10ms;
+    CONSTANT PERIOD : TIME := 10 ms;
 
     -- Signals
     SIGNAL clk : STD_LOGIC := '0';
