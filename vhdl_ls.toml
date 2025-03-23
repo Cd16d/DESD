@@ -1,0 +1,37 @@
+[server]
+enable = true
+
+[files]
+# Specify base directories for all projects
+library_dirs = [
+    "C:/DESD/LAB1/src",
+    "C:/DESD/LAB2/src",
+    "C:/DESD/LAB3/src"
+]
+
+[libraries]
+# Assign separate libraries for each project
+lab1_lib.files = [
+    "C:/DESD/LAB1/src/**/*.vhd"
+]
+
+# lab2_lib.files = [
+#     "C:/DESD/LAB2/src/**/*.vhd"
+# ]
+
+# lab3_lib.files = [
+#     "C:/DESD/LAB3/src/**/*.vhd"
+# ]
+
+[analyses]
+on_save = true
+on_open = true
+
+[ghdl]
+standard = "08"
+library_path = [
+    "C:/Xilinx/Vivado/2020.2/data/vhdl/src"
+]
+
+[vhdl]
+standard = "2008"
