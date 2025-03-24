@@ -2,6 +2,7 @@
 LIBRARY IEEE;
 USE IEEE.STD_LOGIC_1164.ALL;
 USE IEEE.NUMERIC_STD.ALL;
+USE IEEE.MATH_REAL.ALL;
 ------------------------------------
 
 ENTITY KittCarPWM IS
@@ -45,9 +46,10 @@ ARCHITECTURE Behavioral OF KittCarPWM IS
     END COMPONENT;
 
     TYPE leds_sr_type IS ARRAY (TAIL_LENGTH - 1 DOWNTO 0) OF INTEGER RANGE led'LOW TO led'HIGH;
-    
-    CONSTANT MIN_KITT_CAR_STEP_NS : UNSIGNED(46 DOWNTO 0) := to_unsigned(MIN_KITT_CAR_STEP_MS * 1000000, 47);
-    CONSTANT BIT_LENGTH : INTEGER := 5;
+
+    CONSTANT COUNTER_BIT_LENGTH : INTEGER := INTEGER(ceil(log2(real(MIN_KITT_CAR_STEP_MS * 1000000 * 2 ** NUM_OF_SWS - 1))));
+    CONSTANT PERIOD_BIT_LENGTH : INTEGER := INTEGER(ceil(log2(real(TAIL_LENGTH))));
+    CONSTANT MIN_KITT_CAR_STEP_NS : UNSIGNED(COUNTER_BIT_LENGTH - 1 DOWNTO 0) := to_unsigned(MIN_KITT_CAR_STEP_MS * 1000000, COUNTER_BIT_LENGTH);
 
     SIGNAL pwms : STD_LOGIC_VECTOR(TAIL_LENGTH - 1 DOWNTO 0) := (OTHERS => '0');
     SIGNAL leds_sig : STD_LOGIC_VECTOR(NUM_OF_LEDS - 1 DOWNTO 0) := (OTHERS => '0');
@@ -61,13 +63,13 @@ BEGIN
     BEGIN
         PWM : PulseWidthModulator
         GENERIC MAP(
-            BIT_LENGTH => BIT_LENGTH
+            BIT_LENGTH => PERIOD_BIT_LENGTH
         )
         PORT MAP(
             reset => reset,
             clk => clk,
-            Ton => STD_LOGIC_VECTOR(to_unsigned(i, BIT_LENGTH)),
-            Period => STD_LOGIC_VECTOR(to_unsigned(TAIL_LENGTH - 1, BIT_LENGTH)),
+            Ton => STD_LOGIC_VECTOR(to_unsigned(i, PERIOD_BIT_LENGTH)),
+            Period => STD_LOGIC_VECTOR(to_unsigned(TAIL_LENGTH - 1, PERIOD_BIT_LENGTH)),
             PWM => pwms(i - 1)
         );
     END GENERATE;
@@ -76,7 +78,7 @@ BEGIN
     PROCESS (clk, reset)
         VARIABLE up : STD_LOGIC := '1'; -- Direction of LED movement
         VARIABLE leds_sr : leds_sr_type := (OTHERS => 0); -- Shift register for LED positions
-        VARIABLE counter : UNSIGNED(46 DOWNTO 0) := (OTHERS => '0'); -- Timing counter
+        VARIABLE counter : UNSIGNED(COUNTER_BIT_LENGTH - 1 DOWNTO 0) := (OTHERS => '0'); -- Timing counter
         VARIABLE n_period : UNSIGNED(NUM_OF_SWS DOWNTO 0) := to_unsigned(1, NUM_OF_SWS + 1); -- Period multiplier
     BEGIN
         IF reset = '1' THEN
