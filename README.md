@@ -41,7 +41,7 @@ To get started with this project, follow these steps:
    This will create a folder named `DESD`.  
 3. Open the folder `\DESD` in [Visual Studio Code](https://code.visualstudio.com/).  
 
-> ⚠️ **Warning**:  
+> [!Warning]  
 > The folder structure in the repository may not match the Vivado project structure.  
 > If you encounter issues with missing or mismatched files in Vivado, refer to the [Replacing Files in Vivado](#replacing-files-in-vivado) section to update the project with the correct files.
 
