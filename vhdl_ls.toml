@@ -1,35 +1,26 @@
 [server]
 enable = true
 
-[files]
-# Specify base directories for all projects
-library_dirs = [
-    "C:/DESD/LAB0/",
-    "C:/DESD/LAB1/",
-    "C:/DESD/LAB2/",
-    "C:/DESD/LAB3/"
-]
-
 [libraries]
 # Assign separate libraries for each project
 lab0_lib.files = [
-    "C:/DESD/LAB0/src/**/*.vhd",
-    "C:/DESD/LAB0/sim/**/*.vhd"
+    "LAB0/src/**/*.vhd",
+    "LAB0/sim/**/*.vhd"
 ]
 
 lab1_lib.files = [
-    "C:/DESD/LAB1/src/**/*.vhd",
-    "C:/DESD/LAB1/sim/**/*.vhd"
+    "LAB1/src/**/*.vhd",
+    "LAB1/sim/**/*.vhd"
 ]
 
 # lab2_lib.files = [
-#     "C:/DESD/LAB2/src/**/*.vhd",
-#     "C:/DESD/LAB2/sim/**/*.vhd"
+#     "LAB2/src/**/*.vhd",
+#     "LAB2/sim/**/*.vhd"
 # ]
 
 # lab3_lib.files = [
-#     "C:/DESD/LAB3/src/**/*.vhd",
-#     "C:/DESD/LAB3/sim/**/*.vhd"
+#     "LAB3/src/**/*.vhd",
+#     "LAB3/sim/**/*.vhd"
 # ]
 
 [analyses]
