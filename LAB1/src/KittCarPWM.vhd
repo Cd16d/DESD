@@ -63,7 +63,7 @@ BEGIN
     BEGIN
         PWM : PulseWidthModulator
         GENERIC MAP(
-            BIT_LENGTH => PERIOD_BIT_LENGTH
+            BIT_LENGTH => PERIOD_BIT_LENGTH - 1
         )
         PORT MAP(
             reset => reset,
