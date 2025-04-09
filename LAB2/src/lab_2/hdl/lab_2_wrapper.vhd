@@ -1,7 +1,7 @@
 --Copyright 1986-2020 Xilinx, Inc. All Rights Reserved.
 ----------------------------------------------------------------------------------
 --Tool Version: Vivado v.2020.2 (win64) Build 3064766 Wed Nov 18 09:12:45 MST 2020
---Date        : Mon Mar 31 15:19:19 2025
+--Date        : Wed Apr  9 11:36:10 2025
 --Host        : Davide-Samsung running 64-bit major release  (build 9200)
 --Command     : generate_target lab_2_wrapper.bd
 --Design      : lab_2_wrapper
@@ -26,11 +26,11 @@ end lab_2_wrapper;
 architecture STRUCTURE of lab_2_wrapper is
   component lab_2 is
   port (
-    reset : in STD_LOGIC;
-    sys_clock : in STD_LOGIC;
     led_of : out STD_LOGIC;
     led_ok : out STD_LOGIC;
     led_uf : out STD_LOGIC;
+    sys_clock : in STD_LOGIC;
+    reset : in STD_LOGIC;
     usb_uart_txd : out STD_LOGIC;
     usb_uart_rxd : in STD_LOGIC
   );
