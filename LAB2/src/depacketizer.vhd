@@ -20,7 +20,6 @@ entity depacketizer is
         m_axis_tvalid : out std_logic; 
         m_axis_tready : in std_logic; 
         m_axis_tlast : out std_logic
-        
     );
 end entity depacketizer;
 
