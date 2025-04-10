@@ -11,7 +11,7 @@ lab1_lib.files = [
 ]
 
 lab2_lib.files = [
-    "LAB2/src/**/*.vhd",
+    "LAB2/src/*.vhd",
     "LAB2/sim/**/*.vhd"
 ]
 
@@ -24,3 +24,8 @@ xpm.files = [
   "C:/Xilinx/Vivado/2020.2/data/ip/xpm/xpm_VCOMP.vhd"
 ]
 xpm.is_third_party = true
+
+unisim.files = [
+  "C:/Xilinx/Vivado/2020.2/data/vhdl/src/unisims/**/*.vhd"
+]
+unisim.is_third_party = true
