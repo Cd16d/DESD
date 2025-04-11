@@ -30,29 +30,30 @@ ARCHITECTURE Behavioral OF rgb2gray IS
 
 	COMPONENT divider_by_3
 		GENERIC (
-			BIT_DEPTH : INTEGER := 8
+			BIT_DEPTH : INTEGER := 7
 		);
 		PORT (
 			dividend : IN UNSIGNED(BIT_DEPTH + 1 DOWNTO 0);
-			gray : OUT UNSIGNED(BIT_DEPTH - 1 DOWNTO 0));
+			result : OUT UNSIGNED(BIT_DEPTH - 1 DOWNTO 0));
 	END COMPONENT divider_by_3;
 
 	TYPE state_type IS (WAIT_R, WAIT_G, WAIT_B);
 	SIGNAL state : state_type := WAIT_R;
 
 	SIGNAL r_val, g_val : unsigned(7 DOWNTO 0);
-	SIGNAL sum : unsigned(9 DOWNTO 0);
-	SIGNAL gray : UNSIGNED(7 DOWNTO 0);
+	SIGNAL sum : unsigned(8 DOWNTO 0);
+	SIGNAL gray : UNSIGNED(6 DOWNTO 0);
+	SIGNAL send_data : STD_LOGIC := '0';
 
 BEGIN
 
 	DIVIDER : divider_by_3
 	GENERIC MAP(
-		BIT_DEPTH => 8
+		BIT_DEPTH => 7
 	)
 	PORT MAP(
 		dividend => sum,
-		gray => gray
+		result => gray
 	);
 
 	PROCESS (clk)
@@ -70,32 +71,43 @@ BEGIN
 				sum <= (OTHERS => '0');
 			ELSE
 				-- Default control signals
-				s_axis_tready <= '1';
-				m_axis_tlast <= '0';
+				m_axis_tlast <= s_axis_tlast;
+				m_axis_tvalid <= '0';
 
 				-- If downstream is ready, send the grayscale pixel
-				IF m_axis_tready = '1' THEN
-					m_axis_tdata <= STD_LOGIC_VECTOR(gray);
-					m_axis_tlast <= s_axis_tlast;
+				IF m_axis_tready = '1' AND send_data = '1' THEN
+					m_axis_tdata <= STD_LOGIC_VECTOR('0' & gray);
+					m_axis_tvalid <= '1';
+					send_data <= '0';
 				END IF;
 
 				CASE state IS
 					WHEN WAIT_R =>
 						IF s_axis_tvalid = '1' THEN
 							r_val <= unsigned(s_axis_tdata);
+
+							IF m_axis_tready = '0' THEN
+								s_axis_tready <= '0';
+							END IF;
+
 							state <= WAIT_G;
 						END IF;
 
 					WHEN WAIT_G =>
 						IF s_axis_tvalid = '1' THEN
 							g_val <= unsigned(s_axis_tdata);
-							state <= WAIT_B;
+
+							IF m_axis_tready = '1' THEN
+								s_axis_tready <= '1';
+								state <= WAIT_B;
+							END IF;
 						END IF;
 
 					WHEN WAIT_B =>
 						IF s_axis_tvalid = '1' THEN
-							sum <= ('0' & '0' & r_val) + ('0' & '0' & g_val) + ('0' & '0' & unsigned(s_axis_tdata));
-							m_axis_tvalid <= '1';
+							sum <= RESIZE(r_val + g_val + unsigned(s_axis_tdata), 9);
+							send_data <= '1';
+
 							state <= WAIT_R;
 						END IF;
 

@@ -45,35 +45,89 @@ ARCHITECTURE Behavioral OF rgb2gray_tb IS
 
 BEGIN
 
-    m_axis_tready<='1';
-
-    clk <= not clk AFTER clk_period / 2; -- Clock generation
+    clk <= NOT clk AFTER clk_period / 2; -- Clock generation
 
     -- Instantiate the Device Under Test (DUT)
-    DUT: rgb2gray
-        PORT MAP (
-            clk => clk,
-            resetn => resetn,
-            m_axis_tvalid => m_axis_tvalid,
-            m_axis_tdata => m_axis_tdata,
-            m_axis_tready => m_axis_tready,
-            m_axis_tlast => m_axis_tlast,
-            s_axis_tvalid => s_axis_tvalid,
-            s_axis_tdata => s_axis_tdata,
-            s_axis_tready => s_axis_tready,
-            s_axis_tlast => s_axis_tlast
-        );
+    DUT : rgb2gray
+    PORT MAP(
+        clk => clk,
+        resetn => resetn,
+        m_axis_tvalid => m_axis_tvalid,
+        m_axis_tdata => m_axis_tdata,
+        m_axis_tready => m_axis_tready,
+        m_axis_tlast => m_axis_tlast,
+        s_axis_tvalid => s_axis_tvalid,
+        s_axis_tdata => s_axis_tdata,
+        s_axis_tready => s_axis_tready,
+        s_axis_tlast => s_axis_tlast
+    );
 
     -- Stimulus process
     stimulus_process : PROCESS
         VARIABLE pixel_value : INTEGER := 1; -- Variable to increment pixel values
     BEGIN
-        wait for 10 ns;
-        resetn<='1';
+        WAIT FOR 10 ns;
+        resetn <= '1';
         s_axis_tvalid <= '1';
 
         -- Send multiple RGB pixels with incrementing values
-        FOR i IN 0 TO 10 LOOP -- Send 10 pixels
+        FOR i IN 0 TO 5 LOOP -- Send 10 pixels
+            -- R component
+            s_axis_tdata <= STD_LOGIC_VECTOR(TO_UNSIGNED(pixel_value, 8));
+            WAIT FOR clk_period;
+
+            -- G component
+            pixel_value := pixel_value + 5;
+            s_axis_tdata <= STD_LOGIC_VECTOR(TO_UNSIGNED(pixel_value, 8));
+            WAIT FOR clk_period;
+
+            -- B component
+            pixel_value := pixel_value + 1;
+            s_axis_tdata <= STD_LOGIC_VECTOR(TO_UNSIGNED(pixel_value, 8));
+            WAIT FOR clk_period;
+
+            -- Reset last signal
+            pixel_value := pixel_value + 1;
+        END LOOP;
+
+        m_axis_tready <= '0';
+
+        -- R component
+        s_axis_tdata <= STD_LOGIC_VECTOR(TO_UNSIGNED(pixel_value, 8));
+        WAIT FOR clk_period;
+
+        -- G component
+        pixel_value := pixel_value + 5;
+        s_axis_tdata <= STD_LOGIC_VECTOR(TO_UNSIGNED(pixel_value, 8));
+        WAIT FOR clk_period;
+
+        -- B component
+        pixel_value := pixel_value + 1;
+        s_axis_tdata <= STD_LOGIC_VECTOR(TO_UNSIGNED(pixel_value, 8));
+        WAIT FOR clk_period;
+
+        FOR i IN 0 TO 3 LOOP -- Send 10 pixels
+            -- R component
+            s_axis_tdata <= STD_LOGIC_VECTOR(TO_UNSIGNED(pixel_value, 8));
+            WAIT FOR clk_period;
+
+            -- G component
+            pixel_value := pixel_value + 5;
+            s_axis_tdata <= STD_LOGIC_VECTOR(TO_UNSIGNED(pixel_value, 8));
+            WAIT FOR clk_period;
+
+            -- B component
+            pixel_value := pixel_value + 1;
+            s_axis_tdata <= STD_LOGIC_VECTOR(TO_UNSIGNED(pixel_value, 8));
+            WAIT FOR clk_period;
+
+            -- Reset last signal
+            pixel_value := pixel_value + 1;
+        END LOOP;
+
+        m_axis_tready <= '1';
+
+        FOR i IN 0 TO 3 LOOP -- Send 10 pixels
             -- R component
             s_axis_tdata <= STD_LOGIC_VECTOR(TO_UNSIGNED(pixel_value, 8));
             WAIT FOR clk_period;

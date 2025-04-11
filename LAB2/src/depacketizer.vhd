@@ -1,99 +1,94 @@
-library ieee;
-use ieee.std_logic_1164.all;
-use ieee.numeric_std.all;
-
-
-entity depacketizer is
-    generic (
-        HEADER: INTEGER :=16#FF#;
-        FOOTER: INTEGER :=16#F1#
+LIBRARY ieee;
+USE ieee.std_logic_1164.ALL;
+USE ieee.numeric_std.ALL;
+ENTITY depacketizer IS
+    GENERIC (
+        HEADER : INTEGER := 16#FF#;
+        FOOTER : INTEGER := 16#F1#
     );
-    port (
-        clk   : in std_logic;
-        aresetn : in std_logic;
+    PORT (
+        clk : IN STD_LOGIC;
+        aresetn : IN STD_LOGIC;
 
-        s_axis_tdata : in std_logic_vector(7 downto 0);
-        s_axis_tvalid : in std_logic; 
-        s_axis_tready : out std_logic; 
+        s_axis_tdata : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
+        s_axis_tvalid : IN STD_LOGIC;
+        s_axis_tready : OUT STD_LOGIC;
 
-        m_axis_tdata : out std_logic_vector(7 downto 0);
-        m_axis_tvalid : out std_logic; 
-        m_axis_tready : in std_logic; 
-        m_axis_tlast : out std_logic
+        m_axis_tdata : OUT STD_LOGIC_VECTOR(7 DOWNTO 0);
+        m_axis_tvalid : OUT STD_LOGIC;
+        m_axis_tready : IN STD_LOGIC;
+        m_axis_tlast : OUT STD_LOGIC
     );
-end entity depacketizer;
+END ENTITY depacketizer;
 
-architecture rtl of depacketizer is
+ARCHITECTURE rtl OF depacketizer IS
 
     -- Enumeration for the state machine
     -- IDLE: Waiting for the start of a new packet
     -- STREAMING: Actively processing and forwarding packet data
-    type state_type is (IDLE, STREAMING);
-    signal state : state_type := IDLE;
+    TYPE state_type IS (IDLE, STREAMING);
+    SIGNAL state : state_type := IDLE;
 
     -- Buffer to handle backpressure
-    signal buffer_in : std_logic_vector(7 downto 0) := (others => '0');
-    signal buffer_valid  : std_logic := '0'; -- Indicates if buffer_in contains valid data
-begin
+    SIGNAL buffer_in : STD_LOGIC_VECTOR(7 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL buffer_valid : STD_LOGIC := '0'; -- Indicates if buffer_in contains valid data
+BEGIN
 
-    depacketizer_fsm: process(clk)
-    begin
-        if rising_edge(clk) then
-            if aresetn = '0' then
+    depacketizer_fsm : PROCESS (clk)
+    BEGIN
+        IF rising_edge(clk) THEN
+            IF aresetn = '0' THEN
                 -- Reset: back to idle and clear everything
-                state         <= IDLE;
+                state <= IDLE;
                 s_axis_tready <= '0';
                 m_axis_tvalid <= '0';
-                m_axis_tlast  <= '0';
-                m_axis_tdata  <= (others => '0');
-                buffer_in    <= (others => '0');
-                buffer_valid  <= '0';
+                m_axis_tlast <= '0';
+                m_axis_tdata <= (OTHERS => '0');
+                buffer_in <= (OTHERS => '0');
+                buffer_valid <= '0';
 
-            else
+            ELSE
                 -- Defaults for each clock cycle
                 s_axis_tready <= '1';
                 m_axis_tvalid <= '0';
-                m_axis_tlast  <= '0';
+                m_axis_tlast <= '0';
 
-                case state is
+                CASE state IS
 
-                    when IDLE =>
+                    WHEN IDLE =>
                         -- Wait for start of a new packet
-                        if s_axis_tvalid = '1' then
-                            if s_axis_tdata = std_logic_vector(to_unsigned(HEADER, 8)) then
+                        IF s_axis_tvalid = '1' THEN
+                            m_axis_tvalid <= '0';
+                            IF s_axis_tdata = STD_LOGIC_VECTOR(to_unsigned(HEADER, 8)) THEN
                                 state <= STREAMING;
-                            end if;
-                        end if;
+                            END IF;
+                        END IF;
 
-                    when STREAMING =>
-                        if s_axis_tvalid = '1' then
+                    WHEN STREAMING =>
+                        IF s_axis_tvalid = '1' THEN
+
                             -- End of packet detected
-                            if s_axis_tdata = std_logic_vector(to_unsigned(FOOTER, 8)) then
-                                state        <= IDLE;
-                                m_axis_tlast <= '1';  -- Let receiver know packet ends
-                            else
+                            IF s_axis_tdata = STD_LOGIC_VECTOR(to_unsigned(FOOTER, 8)) THEN
+                                -- Send the last data and transition to IDLE
+                                m_axis_tdata <= buffer_in; -- Send the last buffered data
+                                state <= IDLE;
+                                m_axis_tlast <= '1'; -- Let receiver know packet ends
+                            ELSE
                                 -- Valid payload: send to output
-                                if buffer_valid = '1' then
-                                    if m_axis_tready = '1' then
-                                        m_axis_tdata  <= buffer_in;
-                                        m_axis_tvalid <= '1';
-                                        buffer_valid  <= '0'; -- Clear the buffer
-                                    end if;
-                                else
-                                    if m_axis_tready = '1' then
-                                        m_axis_tdata  <= s_axis_tdata;
-                                        m_axis_tvalid <= '1';
-                                    else
-                                        buffer_in    <= s_axis_tdata;
-                                        buffer_valid  <= '1'; -- Mark buffer as valid
-                                    end if;
-                                end if;
-                            end if;
-                        end if;
+                                IF buffer_valid = '1' AND m_axis_tready = '1' THEN
+                                    m_axis_tdata <= buffer_in;
+                                    m_axis_tvalid <= '1';
+                                    buffer_valid <= '0'; -- Clear the buffer
+                                END IF;
 
-                end case;
-            end if;
-        end if;
-    end process;
+                                buffer_in <= s_axis_tdata;
+                                buffer_valid <= '1';
+                            END IF;
+                        END IF;
 
-end architecture;
+                END CASE;
+            END IF;
+        END IF;
+    END PROCESS;
+
+END ARCHITECTURE;
