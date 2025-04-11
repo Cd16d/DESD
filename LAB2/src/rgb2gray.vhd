@@ -33,17 +33,16 @@ ARCHITECTURE Behavioral OF rgb2gray IS
 			BIT_DEPTH : INTEGER := 8
 		);
 		PORT (
-			R : IN STD_LOGIC_VECTOR(BIT_DEPTH - 1 DOWNTO 0);
-			G : IN STD_LOGIC_VECTOR(BIT_DEPTH - 1 DOWNTO 0);
-			B : IN STD_LOGIC_VECTOR(BIT_DEPTH - 1 DOWNTO 0);
-			grey : OUT STD_LOGIC_VECTOR(BIT_DEPTH - 1 DOWNTO 0));
+			dividend : IN UNSIGNED(BIT_DEPTH + 1 DOWNTO 0);
+			gray : OUT UNSIGNED(BIT_DEPTH - 1 DOWNTO 0));
 	END COMPONENT divider_by_3;
 
 	TYPE state_type IS (WAIT_R, WAIT_G, WAIT_B);
 	SIGNAL state : state_type := WAIT_R;
 
-	SIGNAL r_val, g_val, b_val : unsigned(7 DOWNTO 0);
-	SIGNAL gray : unsigned(7 DOWNTO 0);
+	SIGNAL r_val, g_val : unsigned(7 DOWNTO 0);
+	SIGNAL sum : unsigned(9 DOWNTO 0);
+	SIGNAL gray : UNSIGNED(7 DOWNTO 0);
 
 BEGIN
 
@@ -52,10 +51,8 @@ BEGIN
 		BIT_DEPTH => 8
 	)
 	PORT MAP(
-		R => STD_LOGIC_VECTOR(r_val),
-		G => STD_LOGIC_VECTOR(g_val),
-		B => STD_LOGIC_VECTOR(b_val),
-		grey => STD_LOGIC_VECTOR(gray)
+		dividend => sum,
+		gray => gray
 	);
 
 	PROCESS (clk)
@@ -70,13 +67,17 @@ BEGIN
 				m_axis_tdata <= (OTHERS => '0');
 				r_val <= (OTHERS => '0');
 				g_val <= (OTHERS => '0');
-				b_val <= (OTHERS => '0');
-				gray <= (OTHERS => '0');
+				sum <= (OTHERS => '0');
 			ELSE
 				-- Default control signals
 				s_axis_tready <= '1';
-				m_axis_tvalid <= '0';
 				m_axis_tlast <= '0';
+
+				-- If downstream is ready, send the grayscale pixel
+				IF m_axis_tready = '1' THEN
+					m_axis_tdata <= STD_LOGIC_VECTOR(gray);
+					m_axis_tlast <= s_axis_tlast;
+				END IF;
 
 				CASE state IS
 					WHEN WAIT_R =>
@@ -93,16 +94,11 @@ BEGIN
 
 					WHEN WAIT_B =>
 						IF s_axis_tvalid = '1' THEN
-							b_val <= unsigned(s_axis_tdata);
-						END IF;
-
-						-- If downstream is ready, send the grayscale pixel
-						IF m_axis_tready = '1' THEN
-							m_axis_tdata <= STD_LOGIC_VECTOR(gray);
+							sum <= ('0' & '0' & r_val) + ('0' & '0' & g_val) + ('0' & '0' & unsigned(s_axis_tdata));
 							m_axis_tvalid <= '1';
-							m_axis_tlast <= s_axis_tlast;
 							state <= WAIT_R;
 						END IF;
+
 				END CASE;
 			END IF;
 		END IF;

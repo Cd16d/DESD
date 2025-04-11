@@ -10,10 +10,8 @@ ENTITY divider_by_3 IS
         BIT_DEPTH : INTEGER := 8
     );
     PORT (
-        R : IN STD_LOGIC_VECTOR(BIT_DEPTH - 1 DOWNTO 0);
-        G : IN STD_LOGIC_VECTOR(BIT_DEPTH - 1 DOWNTO 0);
-        B : IN STD_LOGIC_VECTOR(BIT_DEPTH - 1 DOWNTO 0);
-        grey : OUT STD_LOGIC_VECTOR(BIT_DEPTH - 1 DOWNTO 0)
+        dividend : IN UNSIGNED(BIT_DEPTH + 1 DOWNTO 0);
+        gray : OUT UNSIGNED(BIT_DEPTH - 1 DOWNTO 0)
     );
 END divider_by_3;
 
@@ -26,7 +24,7 @@ ARCHITECTURE Behavioral OF divider_by_3 IS
 
     -- Signals to hold the sum of the RGB channels and the intermediate results
     SIGNAL rgb_sum_extended : UNSIGNED(BIT_DEPTH + 1 DOWNTO 0) := (OTHERS => '0');
-    SIGNAL scaled_result : UNSIGNED(RESULT_WIDTH - 1 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL scaled_result : UNSIGNED(RESULT_WIDTH DOWNTO 0) := (OTHERS => '0');
     SIGNAL grayscale_value : UNSIGNED(BIT_DEPTH - 1 DOWNTO 0) := (OTHERS => '0');
 BEGIN
 
@@ -39,15 +37,15 @@ BEGIN
     -- 4. The final grayscale value is extracted from the result and converted back to a std_logic_vector.
 
     -- Calculate the sum of the RGB channels
-    rgb_sum_extended <= UNSIGNED(R) + UNSIGNED(G) + UNSIGNED(B) + TO_UNSIGNED(2, BIT_DEPTH + 2);
+    rgb_sum_extended <= dividend + TO_UNSIGNED(2, BIT_DEPTH + 2);
 
     -- Multiply the sum by the precomputed multiplier
-    scaled_result <= rgb_sum_extended * TO_UNSIGNED(DIVISION_MULTIPLIER, RESULT_WIDTH);
+    scaled_result <= rgb_sum_extended * TO_UNSIGNED(DIVISION_MULTIPLIER, BIT_DEPTH + 1);
 
     -- Extract the grayscale value from the scaled result by right-shifting
-    grayscale_value <= scaled_result(RESULT_WIDTH - 1 DOWNTO RESULT_WIDTH - BIT_DEPTH - 1);
+    grayscale_value <= scaled_result(RESULT_WIDTH - 1 DOWNTO RESULT_WIDTH - BIT_DEPTH);
 
     -- Assign the grayscale value to the output
-    grey <= STD_LOGIC_VECTOR(grayscale_value);
+    gray <= grayscale_value;
 
 END Behavioral;
