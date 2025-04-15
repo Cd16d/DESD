@@ -1,115 +1,125 @@
-library ieee;
-use ieee.std_logic_1164.all;
-use ieee.numeric_std.all;
+LIBRARY ieee;
+USE ieee.std_logic_1164.ALL;
+USE ieee.numeric_std.ALL;
 
-
-entity packetizer is
-    generic (
-        HEADER: INTEGER :=16#FF#;
-        FOOTER: INTEGER :=16#F1#
+ENTITY packetizer IS
+    GENERIC (
+        HEADER : INTEGER := 16#FF#;
+        FOOTER : INTEGER := 16#F1#
     );
-    port (
-        clk   : in std_logic;
-        aresetn : in std_logic;
+    PORT (
+        clk : IN STD_LOGIC;
+        aresetn : IN STD_LOGIC;
 
-        s_axis_tdata : in std_logic_vector(7 downto 0);
-        s_axis_tvalid : in std_logic; 
-        s_axis_tready : out std_logic; 
-        s_axis_tlast : in std_logic;
+        s_axis_tdata : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
+        s_axis_tvalid : IN STD_LOGIC;
+        s_axis_tready : OUT STD_LOGIC;
+        s_axis_tlast : IN STD_LOGIC;
 
-        m_axis_tdata : out std_logic_vector(7 downto 0);
-        m_axis_tvalid : out std_logic; 
-        m_axis_tready : in std_logic 
-        
+        m_axis_tdata : OUT STD_LOGIC_VECTOR(7 DOWNTO 0);
+        m_axis_tvalid : OUT STD_LOGIC;
+        m_axis_tready : IN STD_LOGIC;
+        m_axis_tlast : OUT STD_LOGIC
     );
-end entity packetizer;
+END ENTITY packetizer;
 
-architecture rtl of packetizer is
+ARCHITECTURE rtl OF packetizer IS
 
-    type state_type is (IDLE, SEND_HEADER, FORWARD_PAYLOAD, SEND_FOOTER);
-    signal state : state_type := IDLE;
+    TYPE state_type IS (IDLE, SENDING_HEADER, SENDING_DATA, SENDING_FOOTER);
+    SIGNAL state : state_type := IDLE;
 
-    signal payload_buffer : std_logic_vector(7 downto 0);
-    signal last_seen      : std_logic := '0';  -- Tracks s_axis_tlast
-    signal data_valid     : std_logic := '0';
+    SIGNAL data_buffer : STD_LOGIC_VECTOR(7 DOWNTO 0);
 
-begin
+    SIGNAL s_axis_tready_int : STD_LOGIC;
+    SIGNAL m_axis_tvalid_int : STD_LOGIC;
 
-    process(clk)
-    begin
-        if rising_edge(clk) then
-            if aresetn = '0' then
-                -- Reset all states and outputs
-                state          <= IDLE;
-                s_axis_tready  <= '0';
-                m_axis_tvalid  <= '0';
-                m_axis_tdata   <= (others => '0');
-                data_valid     <= '0';
-                last_seen      <= '0';
+    SIGNAL last_seen : STD_LOGIC := '0';
 
-            else
-                -- Defaults
-                s_axis_tready <= '0';
-                m_axis_tvalid <= '0';
+BEGIN
 
-                case state is
+    s_axis_tready <= s_axis_tready_int;
+    m_axis_tvalid <= m_axis_tvalid_int;
 
-                    when IDLE =>
-                        -- Wait for input data to start a new packet
-                        if s_axis_tvalid = '1' then
-                            state         <= SEND_HEADER;
-                            payload_buffer <= s_axis_tdata;
-                            data_valid     <= '1';
-                            last_seen      <= s_axis_tlast;
-                        end if;
+    PROCESS (clk)
+        VARIABLE trigger : STD_LOGIC := '0';
+    BEGIN
 
-                    when SEND_HEADER =>
-                        -- Send HEADER byte
-                        if m_axis_tready = '1' then
-                            m_axis_tdata  <= std_logic_vector(to_unsigned(HEADER, 8));
-                            m_axis_tvalid <= '1';
-                            state         <= FORWARD_PAYLOAD;
-                        end if;
+        IF rising_edge(clk) THEN
+            IF aresetn = '0' THEN
 
-                    when FORWARD_PAYLOAD =>
-                        -- Send buffered payload from IDLE phase
-                        if m_axis_tready = '1' and data_valid = '1' then
-                            m_axis_tdata  <= payload_buffer;
-                            m_axis_tvalid <= '1';
-                            data_valid    <= '0';
+                data_buffer <= (OTHERS => '0');
 
-                            -- Ready to receive next payload byte
-                            s_axis_tready <= '1';
-                        end if;
+                s_axis_tready_int <= '0';
+                m_axis_tvalid_int <= '0';
+                m_axis_tlast <= '0';
 
-                        -- Check for new data while output is valid
-                        if s_axis_tready = '1' and s_axis_tvalid = '1' then
-                            payload_buffer <= s_axis_tdata;
-                            data_valid     <= '1';
-                            last_seen      <= s_axis_tlast;
+            ELSE
 
-                            -- If last payload byte, next state is FOOTER
-                            if s_axis_tlast = '1' then
-                                state <= SEND_FOOTER;
-                            end if;
-                        end if;
+                m_axis_tlast <= '0';
 
-                    when SEND_FOOTER =>
-                        if m_axis_tready = '1' and data_valid = '1' then
-                            -- Send last payload byte
-                            m_axis_tdata  <= payload_buffer;
-                            m_axis_tvalid <= '1';
-                            data_valid    <= '0';
-                        elsif m_axis_tready = '1' then
-                            -- Send FOOTER byte after last payload
-                            m_axis_tdata  <= std_logic_vector(to_unsigned(FOOTER, 8));
-                            m_axis_tvalid <= '1';
-                            state         <= IDLE;
-                        end if;
+                IF m_axis_tready = '1' THEN
+                    m_axis_tvalid_int <= '0';
+                END IF;
 
-                end case;
-            end if;
-        end if;
-    end process;
+                CASE state IS
+                    WHEN IDLE =>
+                        IF s_axis_tvalid = '1' AND s_axis_tready_int = '1' THEN
+                            state <= SENDING_HEADER;
+                        END IF;
 
-end architecture;
+                    WHEN SENDING_HEADER =>
+                        IF m_axis_tvalid_int = '0' OR m_axis_tready = '1' THEN
+                            m_axis_tvalid_int <= '1';
+                            m_axis_tdata <= STD_LOGIC_VECTOR(to_unsigned(HEADER, 8));
+
+                            state <= SENDING_DATA;
+                        END IF;
+
+                    WHEN SENDING_DATA =>
+                        IF s_axis_tvalid = '1' AND s_axis_tready_int = '1' THEN
+                            IF s_axis_tlast = '1' THEN
+                                last_seen <= '1';
+                            END IF;
+
+                            trigger := '1';
+                        END IF;
+
+                        IF last_seen = '1' THEN
+                            state <= SENDING_FOOTER;
+                            last_seen <= '0';
+
+                            trigger := '1';
+                        END IF;
+
+                    WHEN SENDING_FOOTER =>
+                        IF m_axis_tvalid_int = '0' OR m_axis_tready = '1' THEN
+                            m_axis_tvalid_int <= '1';
+                            m_axis_tlast <= '1';
+                            m_axis_tdata <= STD_LOGIC_VECTOR(to_unsigned(FOOTER, 8));
+
+                            state <= IDLE;
+                        END IF;
+
+                END CASE;
+
+                -- Output data - master
+                IF trigger = '1' AND (m_axis_tvalid_int = '0' OR m_axis_tready = '1') THEN
+                    m_axis_tvalid_int <= '1';
+                    m_axis_tdata <= data_buffer;
+
+                    trigger := '0';
+                END IF;
+
+                -- Input data - slave
+                s_axis_tready_int <= m_axis_tready;
+
+                IF s_axis_tvalid = '1' AND s_axis_tready_int = '1' THEN
+                    data_buffer <= s_axis_tdata;
+                END IF;
+
+            END IF;
+        END IF;
+
+    END PROCESS;
+
+END ARCHITECTURE rtl;

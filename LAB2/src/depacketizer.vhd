@@ -1,7 +1,9 @@
 LIBRARY ieee;
 USE ieee.std_logic_1164.ALL;
 USE ieee.numeric_std.ALL;
+
 ENTITY depacketizer IS
+
     GENERIC (
         HEADER : INTEGER := 16#FF#;
         FOOTER : INTEGER := 16#F1#
@@ -16,79 +18,86 @@ ENTITY depacketizer IS
 
         m_axis_tdata : OUT STD_LOGIC_VECTOR(7 DOWNTO 0);
         m_axis_tvalid : OUT STD_LOGIC;
-        m_axis_tready : IN STD_LOGIC;
-        m_axis_tlast : OUT STD_LOGIC
+        m_axis_tlast : OUT STD_LOGIC;
+        m_axis_tready : IN STD_LOGIC
     );
+
 END ENTITY depacketizer;
 
 ARCHITECTURE rtl OF depacketizer IS
 
-    -- Enumeration for the state machine
-    -- IDLE: Waiting for the start of a new packet
-    -- STREAMING: Actively processing and forwarding packet data
-    TYPE state_type IS (IDLE, STREAMING);
+    TYPE state_type IS (IDLE, RECEIVING);
     SIGNAL state : state_type := IDLE;
 
-    -- Buffer to handle backpressure
-    SIGNAL buffer_in : STD_LOGIC_VECTOR(7 DOWNTO 0) := (OTHERS => '0');
-    SIGNAL buffer_valid : STD_LOGIC := '0'; -- Indicates if buffer_in contains valid data
+    SIGNAL data_buffer : STD_LOGIC_VECTOR(7 DOWNTO 0);
+
+    SIGNAL s_axis_tready_int : STD_LOGIC;
+    SIGNAL m_axis_tvalid_int : STD_LOGIC;
+
 BEGIN
 
-    depacketizer_fsm : PROCESS (clk)
+    s_axis_tready <= s_axis_tready_int;
+    m_axis_tvalid <= m_axis_tvalid_int;
+
+    PROCESS (clk)
+        VARIABLE trigger : STD_LOGIC := '0';
     BEGIN
+
         IF rising_edge(clk) THEN
             IF aresetn = '0' THEN
-                -- Reset: back to idle and clear everything
-                state <= IDLE;
-                s_axis_tready <= '0';
-                m_axis_tvalid <= '0';
+
+                data_buffer <= (OTHERS => '0');
+
+                s_axis_tready_int <= '0';
+                m_axis_tvalid_int <= '0';
                 m_axis_tlast <= '0';
-                m_axis_tdata <= (OTHERS => '0');
-                buffer_in <= (OTHERS => '0');
-                buffer_valid <= '0';
 
             ELSE
-                -- Defaults for each clock cycle
-                s_axis_tready <= '1';
-                m_axis_tvalid <= '0';
-                m_axis_tlast <= '0';
 
                 CASE state IS
-
                     WHEN IDLE =>
-                        -- Wait for start of a new packet
-                        IF s_axis_tvalid = '1' THEN
-                            m_axis_tvalid <= '0';
-                            IF s_axis_tdata = STD_LOGIC_VECTOR(to_unsigned(HEADER, 8)) THEN
-                                state <= STREAMING;
+                        IF s_axis_tvalid = '1' AND s_axis_tready_int = '1' THEN
+                            IF data_buffer = STD_LOGIC_VECTOR(to_unsigned(HEADER, 8)) THEN
+                                state <= RECEIVING;
                             END IF;
                         END IF;
 
-                    WHEN STREAMING =>
-                        IF s_axis_tvalid = '1' THEN
-
-                            -- End of packet detected
+                    WHEN RECEIVING =>
+                        IF s_axis_tvalid = '1' AND s_axis_tready_int = '1' THEN
                             IF s_axis_tdata = STD_LOGIC_VECTOR(to_unsigned(FOOTER, 8)) THEN
-                                -- Send the last data and transition to IDLE
-                                m_axis_tdata <= buffer_in; -- Send the last buffered data
+                                m_axis_tlast <= '1';
                                 state <= IDLE;
-                                m_axis_tlast <= '1'; -- Let receiver know packet ends
                             ELSE
-                                -- Valid payload: send to output
-                                IF buffer_valid = '1' AND m_axis_tready = '1' THEN
-                                    m_axis_tdata <= buffer_in;
-                                    m_axis_tvalid <= '1';
-                                    buffer_valid <= '0'; -- Clear the buffer
-                                END IF;
-
-                                buffer_in <= s_axis_tdata;
-                                buffer_valid <= '1';
+                                m_axis_tlast <= '0';
                             END IF;
+
+                            trigger := '1';
                         END IF;
 
                 END CASE;
+
+                -- Output data - master
+                IF m_axis_tready = '1' THEN
+                    m_axis_tvalid_int <= '0';
+                END IF;
+
+                IF trigger = '1' AND (m_axis_tvalid_int = '0' OR m_axis_tready = '1') THEN
+                    m_axis_tvalid_int <= '1';
+                    m_axis_tdata <= data_buffer;
+
+                    trigger := '0';
+                END IF;
+
+                -- Input data - slave
+                s_axis_tready_int <= m_axis_tready;
+
+                IF s_axis_tvalid = '1' AND s_axis_tready_int = '1' THEN
+                    data_buffer <= s_axis_tdata;
+                END IF;
+
             END IF;
         END IF;
+
     END PROCESS;
 
 END ARCHITECTURE;
