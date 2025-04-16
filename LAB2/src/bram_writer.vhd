@@ -45,10 +45,106 @@ architecture rtl of bram_writer is
         );
     end component;
 
-  
+    -- Registri di stato e segnale interno
+    signal addr_cnt   : unsigned(ADDR_WIDTH-1 downto 0) := (others => '0');  -- Contatore indirizzo BRAM
+    signal wr_enable  : std_logic := '0';                                    -- Segnale di scrittura BRAM
+    signal din_reg    : std_logic_vector(7 downto 0) := (others => '0');     -- Dato da scrivere in BRAM
+    signal fsm_state  : integer range 0 to 3 := 0;                            -- Stato FSM
+    signal pixel_count: unsigned(ADDR_WIDTH-1 downto 0) := (others => '0');  -- Pixel ricevuti
+    signal total_px_expected : unsigned(ADDR_WIDTH-1 downto 0);              -- IMG_SIZE * IMG_SIZE
+
+    signal dout_bram : std_logic_vector(7 downto 0);  -- Dato letto dalla BRAM
 
 begin
-    
- 
+
+    -- Calcolo totale pixel attesi = N x N
+    total_px_expected <= to_unsigned(IMG_SIZE * IMG_SIZE, ADDR_WIDTH);
+
+    -- Instanziazione BRAM (scrive e legge)
+    BRAM_CTRL : bram_controller
+        generic map (
+            ADDR_WIDTH => ADDR_WIDTH
+        )
+        port map (
+            clk   => clk,
+            aresetn => aresetn,
+            addr  => conv_addr,
+            dout  => dout_bram,
+            din   => din_reg,
+            we    => wr_enable
+        );
+
+    -- Usiamo solo i primi 7 bit del dato letto per conv_data
+    conv_data <= dout_bram(6 downto 0);
+
+    -- FSM principale
+    process(clk, aresetn)
+    begin
+        if aresetn = '0' then
+            -- Reset asincrono
+            fsm_state <= 0;
+            addr_cnt <= (others => '0');
+            pixel_count <= (others => '0');
+            wr_enable <= '0';
+            s_axis_tready <= '0';
+            write_ok <= '0';
+            overflow <= '0';
+            underflow <= '0';
+            start_conv <= '0';
+
+        elsif rising_edge(clk) then
+            -- Valori di default ogni ciclo
+            wr_enable <= '0';
+            start_conv <= '0';
+            write_ok <= '0';
+            overflow <= '0';
+            underflow <= '0';
+
+            case fsm_state is
+
+                when 0 => -- Stato IDLE/RICEZIONE (legge dati da AXIS)
+                    s_axis_tready <= '1';  -- pronto a ricevere
+
+                    if s_axis_tvalid = '1' then
+                        -- Registra dato ricevuto e scrive in BRAM
+                        din_reg <= s_axis_tdata;
+                        wr_enable <= '1';
+                        addr_cnt <= addr_cnt + 1;
+                        pixel_count <= pixel_count + 1;
+
+                        -- Se è l'ultimo pixel del pacchetto
+                        if s_axis_tlast = '1' then
+                            fsm_state <= 1;
+                        end if;
+                    end if;
+
+                when 1 => -- Controllo overflow/underflow
+                    s_axis_tready <= '0';
+
+                    if pixel_count = total_px_expected then
+                        write_ok <= '1';       -- LED OK
+                    elsif pixel_count < total_px_expected then
+                        underflow <= '1';      -- LED underflow
+                    else
+                        overflow <= '1';       -- LED overflow
+                    end if;
+
+                    fsm_state <= 2;  -- Vai a start convoluzione
+
+                when 2 => -- Avvia convoluzione
+                    start_conv <= '1';  -- Segnale per far partire modulo Conv
+
+                    if done_conv = '1' then
+                        -- Reset e torna a ricevere nuovi dati
+                        fsm_state <= 0;
+                        addr_cnt <= (others => '0');
+                        pixel_count <= (others => '0');
+                    end if;
+
+                when others =>
+                    fsm_state <= 0;
+            end case;
+        end if;
+    end process;
 
 end architecture;
