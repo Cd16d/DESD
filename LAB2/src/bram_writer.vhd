@@ -46,11 +46,13 @@ ARCHITECTURE rtl OF bram_writer IS
         );
     END COMPONENT;
 
-    TYPE state_type IS (IDLE, RECEIVING, CONVOLUTION);
+    TYPE state_type IS (IDLE, RECEIVING, CHECK_START_CONV, CONVOLUTION);
     SIGNAL state : state_type := IDLE;
 
     SIGNAL s_axis_tready_int : STD_LOGIC := '0';
 
+    SIGNAL bram_data_out : STD_LOGIC_VECTOR(7 DOWNTO 0) := (OTHERS => '0'); -- BRAM data output
+    SIGNAL bram_data_in : STD_LOGIC_VECTOR(7 DOWNTO 0) := (OTHERS => '0'); -- BRAM data input
     SIGNAL bram_addr : STD_LOGIC_VECTOR(ADDR_WIDTH - 1 DOWNTO 0) := (OTHERS => '0'); -- BRAM address
     SIGNAL bram_we : STD_LOGIC := '0'; -- Write enable signal for BRAM
 
@@ -67,13 +69,16 @@ BEGIN
         clk => clk,
         aresetn => aresetn,
         addr => bram_addr,
-        dout => conv_data,
-        din => s_axis_tdata,
+        dout => bram_data_out,
+        din => bram_data_in,
         we => bram_we
     );
 
     -- Assign AXIS ready signal
     s_axis_tready <= s_axis_tready_int;
+
+    -- Binding BRAM data to output
+    conv_data <= bram_data_out(6 DOWNTO 0);
 
     -- Select BRAM address based on state
     WITH state SELECT bram_addr <= conv_addr WHEN CONVOLUTION,
@@ -112,6 +117,7 @@ BEGIN
                             -- valid data received, start receiving
                             wr_addr <= (OTHERS => '0');
                             bram_we <= '1'; -- Enable write to BRAM
+                            bram_data_in <= s_axis_tdata; -- Write data to BRAM
                             state <= RECEIVING;
                         END IF;
 
@@ -126,23 +132,27 @@ BEGIN
                                 -- Increment write address and write data to BRAM
                                 wr_addr <= STD_LOGIC_VECTOR(unsigned(wr_addr) + 1);
                                 bram_we <= '1'; -- Enable write to BRAM
+                                bram_data_in <= s_axis_tdata; -- Write data to BRAM
 
                                 -- Check for last data signal
                                 IF s_axis_tlast = '1' THEN
-                                    -- Check for underflow: if not enough data received
-                                    IF unsigned(wr_addr) < (IMG_SIZE ** 2 - 2) THEN
-                                        underflow <= '1';
-                                        state <= IDLE;
-                                    ELSE
-                                        -- Data reception complete, start convolution
-                                        write_ok <= '1';
-
-                                        s_axis_tready_int <= '0';
-                                        start_conv <= '1';
-                                        state <= CONVOLUTION;
-                                    END IF;
+                                        state <= CHECK_START_CONV;
                                 END IF;
                             END IF;
+                        END IF;
+                    
+                    WHEN CHECK_START_CONV =>
+                         -- Check for underflow: if not enough data received
+                         IF unsigned(wr_addr) < (IMG_SIZE ** 2 - 2) THEN
+                            underflow <= '1';
+                            state <= IDLE;
+                        ELSE
+                            -- Data reception complete, start convolution
+                            write_ok <= '1';
+
+                            s_axis_tready_int <= '0';
+                            start_conv <= '1';
+                            state <= CONVOLUTION;
                         END IF;
 
                     WHEN CONVOLUTION =>

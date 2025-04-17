@@ -127,6 +127,12 @@ BEGIN
         wait until write_ok = '1';
         wait until rising_edge(clk);
 
+        -- Require data
+        for i in 0 to IMG_SIZE*IMG_SIZE-1 loop
+            conv_addr <= std_logic_vector(to_unsigned(i, ADDR_WIDTH));
+            wait until rising_edge(clk);
+        end loop;
+
         -- Simulate convolution done
         done_conv <= '1';
         wait until rising_edge(clk);
