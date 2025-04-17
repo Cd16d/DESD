@@ -1,116 +1,161 @@
-library ieee;
-use ieee.std_logic_1164.all;
-use ieee.numeric_std.all;
+LIBRARY ieee;
+USE ieee.std_logic_1164.ALL;
+USE ieee.numeric_std.ALL;
 
-entity bram_writer is
-    generic(
-        ADDR_WIDTH: POSITIVE :=16
+ENTITY bram_writer IS
+    GENERIC (
+        ADDR_WIDTH : POSITIVE := 16;
+        IMG_SIZE : POSITIVE := 256 -- Image size (256x256)
     );
-    port (
-        clk   : in std_logic;
-        aresetn : in std_logic;
+    PORT (
+        clk : IN STD_LOGIC;
+        aresetn : IN STD_LOGIC;
 
-        s_axis_tdata : in std_logic_vector(7 downto 0);
-        s_axis_tvalid : in std_logic; 
-        s_axis_tready : out std_logic; 
-        s_axis_tlast : in std_logic;
+        s_axis_tdata : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
+        s_axis_tvalid : IN STD_LOGIC;
+        s_axis_tready : OUT STD_LOGIC;
+        s_axis_tlast : IN STD_LOGIC;
 
-        conv_addr: in std_logic_vector(ADDR_WIDTH-1 downto 0);
-        conv_data: out std_logic_vector(6 downto 0);
+        conv_addr : IN STD_LOGIC_VECTOR(ADDR_WIDTH - 1 DOWNTO 0);
+        conv_data : OUT STD_LOGIC_VECTOR(6 DOWNTO 0);
 
-        start_conv: out std_logic;
-        done_conv: in std_logic;
+        start_conv : OUT STD_LOGIC;
+        done_conv : IN STD_LOGIC;
 
-        write_ok : out std_logic;
-        overflow : out std_logic;
-        underflow: out std_logic
+        write_ok : OUT STD_LOGIC;
+        overflow : OUT STD_LOGIC;
+        underflow : OUT STD_LOGIC
 
     );
-end entity bram_writer;
+END ENTITY bram_writer;
 
-architecture rtl of bram_writer is
+ARCHITECTURE rtl OF bram_writer IS
 
-    component bram_controller is
-        generic (
-            ADDR_WIDTH: POSITIVE :=16
+    COMPONENT bram_controller IS
+        GENERIC (
+            ADDR_WIDTH : POSITIVE := 16
         );
-        port (
-            clk   : in std_logic;
-            aresetn : in std_logic;
-    
-            addr: in std_logic_vector(ADDR_WIDTH-1 downto 0);
-            dout: out std_logic_vector(7 downto 0);
-            din: in std_logic_vector(7 downto 0);
-            we: in std_logic
-        );
-    end component;
+        PORT (
+            clk : IN STD_LOGIC;
+            aresetn : IN STD_LOGIC;
 
-    TYPE state_type is (IDLE, RECEIVING, CONVOLUTION);
+            addr : IN STD_LOGIC_VECTOR(ADDR_WIDTH - 1 DOWNTO 0);
+            dout : OUT STD_LOGIC_VECTOR(7 DOWNTO 0);
+            din : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
+            we : IN STD_LOGIC
+        );
+    END COMPONENT;
+
+    TYPE state_type IS (IDLE, RECEIVING, CONVOLUTION);
     SIGNAL state : state_type := IDLE;
 
-    SIGNAL s_axis_tready_int : std_logic := '0';
+    SIGNAL s_axis_tready_int : STD_LOGIC := '0';
 
-    SIGNAL bram_addr : std_logic_vector(ADDR_WIDTH-1 downto 0) := (others => '0'); -- Indirizzo BRAM
-    SIGNAL bram_we : std_logic := '0'; -- Segnale di scrittura per il BRAM
+    SIGNAL bram_addr : STD_LOGIC_VECTOR(ADDR_WIDTH - 1 DOWNTO 0) := (OTHERS => '0'); -- BRAM address
+    SIGNAL bram_we : STD_LOGIC := '0'; -- Write enable signal for BRAM
 
-    SIGNAL wr_addr : std_logic_vector(ADDR_WIDTH-1 downto 0) := (others => '0'); -- Indirizzo di scrittura BRAM
+    SIGNAL wr_addr : STD_LOGIC_VECTOR(ADDR_WIDTH - 1 DOWNTO 0) := (OTHERS => '0'); -- Write address for BRAM
 
-begin
-    
-    BRAM_CTRL: bram_controller
-        generic map (
-            ADDR_WIDTH => ADDR_WIDTH
-        )
-        port map (
-            clk => clk,
-            aresetn => aresetn,
-            addr => bram_addr,
-            dout => conv_data,
-            din => s_axis_tdata,
-            we => bram_we
-        );
+BEGIN
 
-    -- AXIS
-    s_axis_tready <= s_axis_tready_int
+    -- Instantiate BRAM controller
+    BRAM_CTRL : bram_controller
+    GENERIC MAP(
+        ADDR_WIDTH => ADDR_WIDTH
+    )
+    PORT MAP(
+        clk => clk,
+        aresetn => aresetn,
+        addr => bram_addr,
+        dout => conv_data,
+        din => s_axis_tdata,
+        we => bram_we
+    );
 
-    -- Gestione addr BRAM
-    with state select bram_addr <=  conv_addr   when CONVOLUTION,
-                                    wr_addr     when Others;
+    -- Assign AXIS ready signal
+    s_axis_tready <= s_axis_tready_int;
 
-    process(clk)
-    begin
-        if rising_edge(clk) then
-            if aresetn = '0' then
+    -- Select BRAM address based on state
+    WITH state SELECT bram_addr <= conv_addr WHEN CONVOLUTION,
+        wr_addr WHEN OTHERS;
+
+    PROCESS (clk)
+    BEGIN
+        IF rising_edge(clk) THEN
+            IF aresetn = '0' THEN
+                -- Reset all signals and state
                 state <= IDLE;
 
                 s_axis_tready_int <= '0';
 
                 bram_we <= '0';
-                wr_addr <= (others => '0');
-                
+                wr_addr <= (OTHERS => '0');
+
                 start_conv <= '0';
                 write_ok <= '0';
                 overflow <= '0';
                 underflow <= '0';
-            else
+            ELSE
+                -- Default assignments for each clock cycle
                 start_conv <= '0';
+                bram_we <= '0';
                 write_ok <= '0';
                 overflow <= '0';
                 underflow <= '0';
+                s_axis_tready_int <= '1';
 
-                case state is
-                    when IDLE =>
-                        s_axis_tready_int <= '1';
+                -- State machine for data handling
+                CASE state IS
+                    WHEN IDLE =>
+                        -- Wait for valid input data
+                        IF s_axis_tvalid = '1' AND s_axis_tready_int = '1' THEN
+                            -- valid data received, start receiving
+                            wr_addr <= (OTHERS => '0');
+                            bram_we <= '1'; -- Enable write to BRAM
+                            state <= RECEIVING;
+                        END IF;
 
+                    WHEN RECEIVING =>
+                        -- Receiving data, increment write address
+                        IF s_axis_tvalid = '1' AND s_axis_tready_int = '1' THEN
+                            -- Check for overflow: if address reaches max image size
+                            IF unsigned(wr_addr) = (IMG_SIZE ** 2 - 1) THEN
+                                overflow <= '1';
+                                state <= IDLE;
+                            ELSE
+                                -- Increment write address and write data to BRAM
+                                wr_addr <= STD_LOGIC_VECTOR(unsigned(wr_addr) + 1);
+                                bram_we <= '1'; -- Enable write to BRAM
 
-                    when RECEIVING =>
+                                -- Check for last data signal
+                                IF s_axis_tlast = '1' THEN
+                                    -- Check for underflow: if not enough data received
+                                    IF unsigned(wr_addr) < (IMG_SIZE ** 2 - 2) THEN
+                                        underflow <= '1';
+                                        state <= IDLE;
+                                    ELSE
+                                        -- Data reception complete, start convolution
+                                        write_ok <= '1';
 
+                                        s_axis_tready_int <= '0';
+                                        start_conv <= '1';
+                                        state <= CONVOLUTION;
+                                    END IF;
+                                END IF;
+                            END IF;
+                        END IF;
 
-                    when CONVOLUTION =>
+                    WHEN CONVOLUTION =>
+                        -- Wait for convolution to finish
+                        s_axis_tready_int <= '0';
 
-                end case;
-            end if;
-        end if;
-    end process; 
+                        IF done_conv = '1' THEN
+                            state <= IDLE;
+                        END IF;
 
-end architecture;
+                END CASE;
+            END IF;
+        END IF;
+    END PROCESS;
+
+END ARCHITECTURE;
