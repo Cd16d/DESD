@@ -1,4 +1,4 @@
-import sys
+""" import sys
 import subprocess
 
 def install_and_import(package, package_name=None):
@@ -16,7 +16,7 @@ install_and_import("serial", "pyserial")
 install_and_import("PIL", "pillow")
 install_and_import("tqdm")
 install_and_import("numpy")
-install_and_import("scipy")
+install_and_import("scipy") """
 
 from serial import Serial
 import serial.tools.list_ports
@@ -25,8 +25,11 @@ from PIL import Image
 from scipy.signal import convolve2d
 import numpy as np
 
-IMAGE_NAME2 = "test2.png"
-IMAGE_NAME1 = "test1.png"
+IMAGE_OF = r'C:\DESD\LAB2\test\test_of.png'
+IMAGE_UF = r'C:\DESD\LAB2\test\test_uf.png'
+IMAGE_NAME3 = r'C:\DESD\LAB2\test\test3.png'
+IMAGE_NAME2 = r'C:\DESD\LAB2\test\test2.png'
+IMAGE_NAME1 = r'C:\DESD\LAB2\test\test1.png'
 
 BASYS3_PID = 0x6010
 BASYS3_VID = 0x0403
@@ -42,16 +45,19 @@ for port in serial.tools.list_ports.comports():
 if not dev:
     raise RuntimeError("Basys 3 Not Found!")
 
-test_n = int(input("Insert test number (1 or 2): ").strip())
+test_n = int(input("Insert test number (1, 2, 3, overflow (4) or underflow (5)): ").strip())
 
-if test_n not in [1, 2]:
-    raise RuntimeError("Test number must be 1 or 2")
+if test_n not in [1, 2, 3, 4, 5]:
+    raise RuntimeError("Test number must be 1, 2, 3, 4 (overflow) or 5 (underflow)")
 
 dev = Serial(dev, 115200)
 
-img = Image.open(IMAGE_NAME1 if test_n == 1 else IMAGE_NAME2)
+img = Image.open(IMAGE_NAME1 if test_n == 1 else IMAGE_NAME2 if test_n == 2 else IMAGE_NAME3 if test_n == 3 else IMAGE_UF if test_n == 5 else IMAGE_OF)
 if img.mode != "RGB":
     img = img.convert("RGB")
+
+IMG_WIDTH, IMG_HEIGHT = img.size  # Get dimensions from the image
+
 mat = np.asarray(img, dtype=np.uint8)
 
 mat = mat[:, :, :3]
@@ -74,6 +80,13 @@ for i in tqdm(range(IMG_HEIGHT)):
 
 dev.write(b'\xf1')
 dev.flush()
+
+if test_n == 4:
+    print("Check for overflow (LED U16)")
+    exit()
+elif test_n == 5:
+    print("Check for underflow (LED U19)")
+    exit()
 
 res = dev.read(IMG_HEIGHT * IMG_WIDTH + 2)
 

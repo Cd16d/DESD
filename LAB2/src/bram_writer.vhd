@@ -46,7 +46,7 @@ ARCHITECTURE rtl OF bram_writer IS
         );
     END COMPONENT;
 
-    TYPE state_type IS (IDLE, RECEIVING, CHECK_START_CONV, CONVOLUTION);
+    TYPE state_type IS (IDLE, RECEIVING, CHECK_DATA, CONVOLUTION);
     SIGNAL state : state_type := IDLE;
 
     SIGNAL s_axis_tready_int : STD_LOGIC := '0';
@@ -57,6 +57,8 @@ ARCHITECTURE rtl OF bram_writer IS
     SIGNAL bram_we : STD_LOGIC := '0'; -- Write enable signal for BRAM
 
     SIGNAL wr_addr : STD_LOGIC_VECTOR(ADDR_WIDTH - 1 DOWNTO 0) := (OTHERS => '0'); -- Write address for BRAM
+
+    SIGNAL overflow_flag : STD_LOGIC := '0'; -- Overflow flag for BRAM write
 
 BEGIN
 
@@ -100,6 +102,8 @@ BEGIN
                 write_ok <= '0';
                 overflow <= '0';
                 underflow <= '0';
+
+                overflow_flag <= '0';
             ELSE
                 -- Default assignments for each clock cycle
                 start_conv <= '0';
@@ -126,24 +130,27 @@ BEGIN
                         IF s_axis_tvalid = '1' AND s_axis_tready_int = '1' THEN
                             -- Check for overflow: if address reaches max image size
                             IF unsigned(wr_addr) = (IMG_SIZE ** 2 - 1) THEN
-                                overflow <= '1';
-                                state <= IDLE;
-                            ELSE
-                                -- Increment write address and write data to BRAM
-                                wr_addr <= STD_LOGIC_VECTOR(unsigned(wr_addr) + 1);
-                                bram_we <= '1'; -- Enable write to BRAM
-                                bram_data_in <= s_axis_tdata; -- Write data to BRAM
+                                overflow_flag <= '1';
+                            END IF;
 
-                                -- Check for last data signal
-                                IF s_axis_tlast = '1' THEN
-                                        state <= CHECK_START_CONV;
-                                END IF;
+                            -- Increment write address and write data to BRAM
+                            wr_addr <= STD_LOGIC_VECTOR(unsigned(wr_addr) + 1);
+                            bram_we <= '1'; -- Enable write to BRAM
+                            bram_data_in <= s_axis_tdata; -- Write data to BRAM
+
+                            -- Check for last data signal
+                            IF s_axis_tlast = '1' THEN
+                                state <= CHECK_DATA;
                             END IF;
                         END IF;
-                    
-                    WHEN CHECK_START_CONV =>
-                         -- Check for underflow: if not enough data received
-                         IF unsigned(wr_addr) < (IMG_SIZE ** 2 - 2) THEN
+
+                    WHEN CHECK_DATA =>
+                        -- Check for overflow/underflow
+                        IF overflow_flag = '1' THEN
+                            overflow <= '1';
+                            overflow_flag <= '0';
+                            state <= IDLE;
+                        ELSIF unsigned(wr_addr) < (IMG_SIZE ** 2 - 1) THEN
                             underflow <= '1';
                             state <= IDLE;
                         ELSE
