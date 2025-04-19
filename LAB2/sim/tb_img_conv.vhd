@@ -17,90 +17,132 @@
 -- Additional Comments:
 -- 
 ----------------------------------------------------------------------------------
-
-
-library IEEE;
-use IEEE.STD_LOGIC_1164.ALL;
+LIBRARY IEEE;
+USE IEEE.STD_LOGIC_1164.ALL;
 
 -- Uncomment the following library declaration if using
 -- arithmetic functions with Signed or Unsigned values
-use IEEE.NUMERIC_STD.ALL;
+USE IEEE.NUMERIC_STD.ALL;
 
 -- Uncomment the following library declaration if instantiating
 -- any Xilinx leaf cells in this code.
 --library UNISIM;
 --use UNISIM.VComponents.all;
 
-entity img_conv_tb is
---  Port ( );
-end img_conv_tb;
+ENTITY img_conv_tb IS
+    --  Port ( );
+END img_conv_tb;
 
-architecture Behavioral of img_conv_tb is
+ARCHITECTURE Behavioral OF img_conv_tb IS
 
-    component img_conv is
-        generic(
-            LOG2_N_COLS: POSITIVE :=8;
-            LOG2_N_ROWS: POSITIVE :=8
+    COMPONENT img_conv IS
+        GENERIC (
+            LOG2_N_COLS : POSITIVE := 8;
+            LOG2_N_ROWS : POSITIVE := 8
         );
-        port (
-    
-            clk   : in std_logic;
-            aresetn : in std_logic;
-    
-            m_axis_tdata : out std_logic_vector(7 downto 0);
-            m_axis_tvalid : out std_logic; 
-            m_axis_tready : in std_logic; 
-            m_axis_tlast : out std_logic;
-            
-            conv_addr: out std_logic_vector(LOG2_N_COLS+LOG2_N_ROWS-1 downto 0);
-            conv_data: in std_logic_vector(6 downto 0);
-    
-            start_conv: in std_logic;
-            done_conv: out std_logic
-            
+        PORT (
+
+            clk : IN STD_LOGIC;
+            aresetn : IN STD_LOGIC;
+
+            m_axis_tdata : OUT STD_LOGIC_VECTOR(7 DOWNTO 0);
+            m_axis_tvalid : OUT STD_LOGIC;
+            m_axis_tready : IN STD_LOGIC;
+            m_axis_tlast : OUT STD_LOGIC;
+
+            conv_addr : OUT STD_LOGIC_VECTOR(LOG2_N_COLS + LOG2_N_ROWS - 1 DOWNTO 0);
+            conv_data : IN STD_LOGIC_VECTOR(6 DOWNTO 0);
+
+            start_conv : IN STD_LOGIC;
+            done_conv : OUT STD_LOGIC
+
         );
-    end component;
+    END COMPONENT;
 
-    constant LOG2_N_COLS: POSITIVE :=2;
-    constant LOG2_N_ROWS: POSITIVE :=2;
+    CONSTANT LOG2_N_COLS : POSITIVE := 2;
+    CONSTANT LOG2_N_ROWS : POSITIVE := 2;
 
-    type mem_type is array(0 to (2**LOG2_N_COLS)*(2**LOG2_N_ROWS)-1) of std_logic_vector(6 downto 0);
+    TYPE mem_type IS ARRAY(0 TO (2 ** LOG2_N_COLS) * (2 ** LOG2_N_ROWS) - 1) OF STD_LOGIC_VECTOR(6 DOWNTO 0);
 
-    signal mem : mem_type := (0=>"0000001",others => (others => '0'));
+    -- Fill memory with more varied values
+    SIGNAL mem : mem_type := (
+        0 => "0000001",
+        1 => "0101010",
+        2 => "0011100",
+        3 => "1110001",
+        4 => "0001011",
+        5 => "0110110",
+        6 => "1001001",
+        7 => "1111111",
+        8 => "0000111",
+        9 => "0010010",
+        10 => "0100101",
+        11 => "0111000",
+        12 => "1001100",
+        13 => "1011011",
+        14 => "1100110",
+        15 => "1010101"
+    );
 
-    signal clk   : std_logic :='0';
-    signal aresetn : std_logic :='0';
+    SIGNAL clk : STD_LOGIC := '0';
+    SIGNAL aresetn : STD_LOGIC := '0';
 
-    signal m_axis_tdata : std_logic_vector(7 downto 0);
-    signal m_axis_tvalid : std_logic; 
-    signal m_axis_tready : std_logic; 
-    signal m_axis_tlast : std_logic;
-    
-    signal conv_addr: std_logic_vector(LOG2_N_COLS+LOG2_N_ROWS-1 downto 0);
-    signal conv_data: std_logic_vector(6 downto 0);
+    SIGNAL m_axis_tdata : STD_LOGIC_VECTOR(7 DOWNTO 0);
+    SIGNAL m_axis_tvalid : STD_LOGIC;
+    SIGNAL m_axis_tready : STD_LOGIC;
+    SIGNAL m_axis_tlast : STD_LOGIC;
 
-    signal start_conv: std_logic;
-    signal done_conv: std_logic;
+    SIGNAL conv_addr : STD_LOGIC_VECTOR(LOG2_N_COLS + LOG2_N_ROWS - 1 DOWNTO 0);
+    SIGNAL conv_data : STD_LOGIC_VECTOR(6 DOWNTO 0);
 
-begin
+    SIGNAL start_conv : STD_LOGIC;
+    SIGNAL done_conv : STD_LOGIC;
 
-    m_axis_tready<='1';
+    SIGNAL tready_block_req : STD_LOGIC := '0';
 
-    clk <= not clk after 5 ns;
+BEGIN
 
-    process (clk)
-    begin
-        if(rising_edge(clk)) then
-            conv_data<=mem(to_integer(unsigned(conv_addr)));
-        end if;
-    end process;
+    -- m_axis_tready logic with blocking step
+    PROCESS (clk)
+        VARIABLE block_counter : INTEGER := 0;
+        VARIABLE tready_blocked : BOOLEAN := FALSE;
+    BEGIN
+        IF rising_edge(clk) THEN
+            IF tready_block_req = '1' AND NOT tready_blocked THEN
+                tready_blocked := TRUE;
+                block_counter := 0;
+            END IF;
 
-    img_conv_inst: img_conv
-     generic map(
+            IF tready_blocked THEN
+                IF block_counter < 19 THEN
+                    m_axis_tready <= '0';
+                    block_counter := block_counter + 1;
+                ELSE
+                    m_axis_tready <= '1';
+                    tready_blocked := FALSE;
+                    block_counter := 0;
+                END IF;
+            ELSE
+                m_axis_tready <= '1';
+            END IF;
+        END IF;
+    END PROCESS;
+
+    clk <= NOT clk AFTER 5 ns;
+
+    PROCESS (clk)
+    BEGIN
+        IF (rising_edge(clk)) THEN
+            conv_data <= mem(to_integer(unsigned(conv_addr)));
+        END IF;
+    END PROCESS;
+
+    img_conv_inst : img_conv
+    GENERIC MAP(
         LOG2_N_COLS => LOG2_N_COLS,
         LOG2_N_ROWS => LOG2_N_ROWS
     )
-     port map(
+    PORT MAP(
         clk => clk,
         aresetn => aresetn,
         m_axis_tdata => m_axis_tdata,
@@ -113,16 +155,31 @@ begin
         done_conv => done_conv
     );
 
-    process
-    begin
-        wait for 10 ns;
-        aresetn<='1';
-        wait until rising_edge(clk);
-        start_conv<='1';
-        wait until rising_edge(clk);
-        start_conv<='0';
-        wait;
-    end process;
+    PROCESS
+    BEGIN
+        WAIT FOR 10 ns;
+        aresetn <= '1';
+        WAIT UNTIL rising_edge(clk);
+        start_conv <= '1';
+        WAIT UNTIL rising_edge(clk);
+        start_conv <= '0';
 
+        -- Wait some cycles, then request tready block for 10 cycles
+        WAIT FOR 200 ns;
+        tready_block_req <= '1';
+        WAIT UNTIL rising_edge(clk);
+        tready_block_req <= '0';
 
-end Behavioral;
+        WAIT FOR 300 ns;
+        tready_block_req <= '1';
+        WAIT UNTIL rising_edge(clk);
+        tready_block_req <= '0';
+
+        WAIT FOR 200 ns;
+        tready_block_req <= '1';
+        WAIT UNTIL rising_edge(clk);
+        tready_block_req <= '0';
+
+        WAIT;
+    END PROCESS;
+END Behavioral;

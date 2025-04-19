@@ -27,150 +27,314 @@ ENTITY img_conv IS
 END ENTITY img_conv;
 
 ARCHITECTURE rtl OF img_conv IS
-
     TYPE conv_mat_type IS ARRAY(0 TO 2, 0 TO 2) OF INTEGER;
-    CONSTANT conv_mat : conv_mat_type := ((-1, -1, -1),(-1, 8, -1),(-1, -1, -1));
+    CONSTANT conv_mat : conv_mat_type := ((-1, -1, -1), (-1, 8, -1), (-1, -1, -1));
 
-    -- Definizione della finestra 3x3; ogni pixel è rappresentato da 8 bit
-    TYPE window_array IS ARRAY(0 TO 2, 0 TO 2) OF STD_LOGIC_VECTOR(7 DOWNTO 0);
-    SIGNAL window : window_array := (OTHERS => (OTHERS => (OTHERS => '0')));
+    TYPE offset_array IS ARRAY(0 TO 2) OF INTEGER;
+    CONSTANT offset : offset_array := (-1, 0, 1);
 
-    -- Parametri immagine
-    CONSTANT IMG_WIDTH : INTEGER := 2 ** LOG2_N_COLS; -- Larghezza dell'immagine
-    CONSTANT IMG_HEIGHT : INTEGER := 2 ** LOG2_N_ROWS; -- Altezza dell'immagine
-
-    -- Indirizzo corrente per la lettura dei pixel
-    SIGNAL current_addr : STD_LOGIC_VECTOR(LOG2_N_COLS + LOG2_N_ROWS - 1 DOWNTO 0);
-
-    -- Variabili per il calcolo della convoluzione
-    SIGNAL conv_sum : INTEGER := 0; -- Somma dei prodotti
-    SIGNAL conv_out : STD_LOGIC_VECTOR(7 DOWNTO 0); -- Risultato della convoluzione
-
-    -- Stato della macchina a stati
-    TYPE state_type IS (IDLE, LOAD_PIXEL, COMPUTE, OUTPUT);
+    TYPE state_type IS (IDLE, START_CONVOLUTING, CONVOLUTING, WAIT_READY);
     SIGNAL state : state_type := IDLE;
 
-    -- Contatori per riga e colonna
-    SIGNAL row, col : INTEGER RANGE 0 TO IMG_HEIGHT - 1 := 0;
+    SIGNAL col : UNSIGNED(LOG2_N_COLS - 1 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL row : UNSIGNED(LOG2_N_ROWS - 1 DOWNTO 0) := (OTHERS => '0');
+
+    SIGNAL col_mat_idx_prv : INTEGER := 0;
+    SIGNAL row_mat_idx_prv : INTEGER := 0;
+
+    SIGNAL col_mat_idx : INTEGER := 0;
+    SIGNAL row_mat_idx : INTEGER := 0;
+
+    SIGNAL col_mat_idx_nxt : INTEGER := 0;
+    SIGNAL row_mat_idx_nxt : INTEGER := 0;
+
+    SIGNAL conv_data_out, conv_data_int, conv_data_mul : SIGNED(10 DOWNTO 0) := (OTHERS => '0');
+
+    SIGNAL m_axis_tvalid_int : STD_LOGIC;
+
+    SIGNAL trigger, prepare_data, ready_data, send_data : STD_LOGIC := '0';
+    SIGNAL tlast : STD_LOGIC := '0';
+    SIGNAL save_data : STD_LOGIC := '0';
 
 BEGIN
 
-    -- Aggiornamento dell'indirizzo di lettura (mapping riga-colonna)
-    conv_addr <= STD_LOGIC_VECTOR(to_unsigned(row * IMG_WIDTH + col, conv_addr'length));
+    m_axis_tvalid <= m_axis_tvalid_int;
 
-    -- Processo principale: macchina a stati per la gestione della convoluzione
-    PROCESS (clk, aresetn)
+    PROCESS (clk)
     BEGIN
-        IF aresetn = '0' THEN
-            -- Reset asincrono: inizializza tutti i segnali
-            state <= IDLE;
-            row <= 0;
-            col <= 0;
-            window <= (OTHERS => (OTHERS => (OTHERS => '0')));
-            conv_sum <= 0;
-            conv_out <= (OTHERS => '0');
-            m_axis_tdata <= (OTHERS => '0');
-            m_axis_tvalid <= '0';
-            m_axis_tlast <= '0';
-            done_conv <= '0';
-            current_addr <= (OTHERS => '0');
-        ELSIF rising_edge(clk) THEN
-            CASE state IS
+        IF rising_edge(clk) THEN
+            IF aresetn = '0' THEN
 
-                    -- Stato IDLE: attende il segnale di start per iniziare la convoluzione
-                WHEN IDLE =>
-                    m_axis_tvalid <= '0';
-                    m_axis_tlast <= '0';
-                    IF start_conv = '1' THEN
-                        row <= 0;
-                        col <= 0;
+                -- Reset all signals
+                state <= IDLE;
+
+                col <= (OTHERS => '0');
+                row <= (OTHERS => '0');
+
+                col_mat_idx_nxt <= 0;
+                row_mat_idx_nxt <= 0;
+
+                col_mat_idx_prv <= 0;
+                row_mat_idx_prv <= 0;
+
+                col_mat_idx <= 0;
+                row_mat_idx <= 0;
+
+                conv_data_out <= (OTHERS => '0');
+                conv_data_int <= (OTHERS => '0');
+                conv_data_mul <= (OTHERS => '0');
+
+                m_axis_tvalid_int <= '0';
+                m_axis_tdata <= (OTHERS => '0');
+                m_axis_tlast <= '0';
+
+                done_conv <= '0';
+
+                trigger <= '0';
+                prepare_data <= '0';
+                ready_data <= '0';
+                send_data <= '0';
+                tlast <= '0';
+                save_data <= '0';
+
+                conv_addr <= (OTHERS => '0');
+
+            ELSE
+                -- Default values for signals
+                done_conv <= '0';
+                m_axis_tlast <= '0';
+
+                CASE state IS
+                    WHEN IDLE =>
+                        -- Default values in IDLE
                         done_conv <= '0';
-                        -- Inizializza la finestra a zero per gestire il padding superiore
-                        window <= (OTHERS => (OTHERS => (OTHERS => '0')));
-                        state <= LOAD_PIXEL;
-                    END IF;
+                        m_axis_tlast <= '0';
+                        m_axis_tvalid_int <= '0';
+                        m_axis_tdata <= (OTHERS => '0');
+                        conv_data_out <= (OTHERS => '0');
+                        conv_data_int <= (OTHERS => '0');
+                        conv_data_mul <= (OTHERS => '0');
+                        trigger <= '0';
+                        prepare_data <= '0';
+                        ready_data <= '0';
+                        send_data <= '0';
+                        tlast <= '0';
+                        save_data <= '0';
+                        conv_addr <= (OTHERS => '0');
 
-                    -- Stato LOAD_PIXEL: carica un nuovo pixel e aggiorna la finestra
-                WHEN LOAD_PIXEL =>
-                    -- Aggiorna la finestra con il nuovo pixel (conv_data)
-                    -- Lo shifting viene realizzato per spostare i dati verso sinistra
-                    IF col = 0 THEN
-                        -- Per ogni riga della finestra si forza la colonna sinistra a zero
-                        FOR i IN 0 TO 2 LOOP
-                            window(i)(0) <= (OTHERS => '0');
-                        END LOOP;
-                    ELSE
-                        FOR i IN 0 TO 2 LOOP
-                            window(i)(0) <= window(i)(1);
-                            window(i)(1) <= window(i)(2);
-                        END LOOP;
-                    END IF;
+                        IF start_conv = '1' THEN
+                            state <= START_CONVOLUTING;
 
-                    -- Aggiorna la colonna destra della finestra con il nuovo pixel
-                    FOR i IN 0 TO 2 LOOP
-                        window(i)(2) <= conv_data;
-                    END LOOP;
+                            -- Reset the convolution matrix position
+                            row <= (OTHERS => '0');
+                            col <= (OTHERS => '0');
 
-                    -- Aggiorna i contatori per scorrere l'immagine
-                    IF col = IMG_WIDTH - 1 THEN
-                        col <= 0;
-                        IF row = IMG_HEIGHT - 1 THEN
-                            state <= COMPUTE;
-                        ELSE
-                            row <= row + 1;
-                        END IF;
-                    ELSE
-                        col <= col + 1;
-                    END IF;
+                            -- Request the first pixel and set pointer to second pixel
+                            row_mat_idx_prv <= 0;
+                            col_mat_idx_prv <= 0;
 
-                    state <= COMPUTE;
+                            row_mat_idx <= 1;
+                            col_mat_idx <= 1;
 
-                    -- Stato COMPUTE: esegue il calcolo della convoluzione
-                WHEN COMPUTE =>
-                    -- Gestione dei bordi: imposta il risultato a zero se la finestra non è completa
-                    IF (row = 0) OR (row = IMG_HEIGHT - 1) OR (col = 0) OR (col = IMG_WIDTH - 1) THEN
-                        conv_sum <= 0;
-                    ELSE
-                        conv_sum <= 0;
-                        -- Moltiplica cella per cella e somma i prodotti
-                        FOR i IN 0 TO 2 LOOP
-                            FOR j IN 0 TO 2 LOOP
-                                conv_sum <= conv_sum + conv_mat(i, j) * to_integer(unsigned(window(i)(j)));
-                            END LOOP;
-                        END LOOP;
-                    END IF;
+                            row_mat_idx_nxt <= 1;
+                            col_mat_idx_nxt <= 2;
 
-                    -- Saturazione del risultato
-                    IF conv_sum < 0 THEN
-                        conv_out <= STD_LOGIC_VECTOR(to_unsigned(0, 8));
-                    ELSIF conv_sum >= 256 THEN
-                        conv_out <= STD_LOGIC_VECTOR(to_unsigned(255, 8));
-                    ELSE
-                        conv_out <= STD_LOGIC_VECTOR(to_unsigned(conv_sum, 8));
-                    END IF;
-
-                    state <= OUTPUT;
-
-                    -- Stato OUTPUT: invia il risultato tramite l'interfaccia AXIS
-                WHEN OUTPUT =>
-                    IF m_axis_tready = '1' THEN
-                        m_axis_tdata <= conv_out;
-                        m_axis_tvalid <= '1';
-                        -- Se siamo sull'ultimo pixel dell'immagine, segnaliamo TLAST e il completamento
-                        IF (row = IMG_HEIGHT - 1) AND (col = IMG_WIDTH - 1) THEN
-                            m_axis_tlast <= '1';
-                            done_conv <= '1';
-                            state <= IDLE;
-                        ELSE
+                            conv_addr <= (OTHERS => '0');
+                            conv_data_out <= (OTHERS => '0');
+                            conv_data_int <= (OTHERS => '0');
+                            conv_data_mul <= (OTHERS => '0');
+                            trigger <= '0';
+                            prepare_data <= '0';
+                            ready_data <= '0';
+                            send_data <= '0';
+                            tlast <= '0';
+                            save_data <= '0';
+                            m_axis_tvalid_int <= '0';
+                            m_axis_tdata <= (OTHERS => '0');
                             m_axis_tlast <= '0';
-                            state <= LOAD_PIXEL;
+                            done_conv <= '0';
                         END IF;
+
+                    WHEN START_CONVOLUTING =>
+                        conv_addr <= STD_LOGIC_VECTOR(
+                            TO_UNSIGNED(
+                            (TO_INTEGER(col) + offset(col_mat_idx_nxt)) +
+                            (TO_INTEGER(row) + offset(row_mat_idx_nxt)) * (2 ** LOG2_N_COLS),
+                            conv_addr'length
+                            )
+                            );
+
+                        state <= CONVOLUTING;
+
+                    WHEN CONVOLUTING =>
+                        -- Convolution operation: accumulate the result of current pixel and kernel coefficient
+                        conv_addr <= STD_LOGIC_VECTOR(
+                            TO_UNSIGNED(
+                            (TO_INTEGER(col) + offset(col_mat_idx_nxt)) +
+                            (TO_INTEGER(row) + offset(row_mat_idx_nxt)) * (2 ** LOG2_N_COLS),
+                            conv_addr'length
+                            )
+                            );
+
+                        conv_data_mul <= RESIZE(
+                            SIGNED('0' & conv_data) * TO_SIGNED(conv_mat(col_mat_idx_prv, row_mat_idx_prv), 5),
+                            conv_data_mul'length
+                            );
+
+                        IF ready_data = '1' THEN
+                            conv_data_out <= conv_data_int + conv_data_mul;
+                            conv_data_int <= (OTHERS => '0');
+                        ELSE
+                            conv_data_int <= conv_data_int + conv_data_mul;
+                        END IF;
+
+                        trigger <= '0';
+
+                    WHEN WAIT_READY =>
+                        -- Wait for m_axis_tready signal to be asserted before sending data and continue convolution
+                        IF m_axis_tready = '1' THEN
+                            conv_addr <= STD_LOGIC_VECTOR(
+                                TO_UNSIGNED(
+                                (TO_INTEGER(col) + offset(col_mat_idx_nxt)) +
+                                (TO_INTEGER(row) + offset(row_mat_idx_nxt)) * (2 ** LOG2_N_COLS),
+                                conv_addr'length
+                                )
+                                );
+
+                            save_data <= '0';
+                            state <= CONVOLUTING;
+                        END IF;
+
+                        IF save_data = '0' THEN
+                            conv_data_mul <= RESIZE(
+                                SIGNED('0' & conv_data) * TO_SIGNED(conv_mat(col_mat_idx_prv, row_mat_idx_prv), 5),
+                                conv_data_mul'length
+                                );
+
+                            IF ready_data = '1' THEN
+                                conv_data_out <= conv_data_int + conv_data_mul;
+                                conv_data_int <= (OTHERS => '0');
+                            ELSE
+                                conv_data_int <= conv_data_int + conv_data_mul;
+                            END IF;
+
+                            save_data <= '1';
+                        END IF;
+
+                END CASE;
+
+                -- Output data - master
+                IF m_axis_tready = '1' THEN
+                    m_axis_tvalid_int <= '0';
+                END IF;
+
+                -- Wait for m_axis_tready signal to be asserted before continuing convolution
+                IF m_axis_tready = '0' AND m_axis_tvalid_int = '1' THEN
+                    state <= WAIT_READY;
+                END IF;
+
+                IF send_data = '1' AND (m_axis_tvalid_int = '0' OR m_axis_tready = '1') THEN
+                    m_axis_tvalid_int <= '1';
+
+                    IF tlast = '1' THEN
+                        state <= IDLE;
+                        done_conv <= '1';
+                        m_axis_tlast <= '1';
+                        tlast <= '0';
                     END IF;
 
-                    -- Stato di default: ritorna a IDLE
-                WHEN OTHERS =>
-                    state <= IDLE;
-            END CASE;
+                    IF conv_data_out < 0 THEN
+                        m_axis_tdata <= STD_LOGIC_VECTOR(TO_UNSIGNED(0, m_axis_tdata'length));
+                    ELSIF conv_data_out > 127 THEN
+                        m_axis_tdata <= STD_LOGIC_VECTOR(TO_UNSIGNED(127, m_axis_tdata'length));
+                    ELSE
+                        m_axis_tdata <= STD_LOGIC_VECTOR(conv_data_out(7 DOWNTO 0));
+                    END IF;
+
+                    -- Reset accumulator and trigger
+                    conv_data_out <= (OTHERS => '0');
+                    send_data <= '0';
+                END IF;
+
+                IF state = CONVOLUTING OR state = START_CONVOLUTING OR (state = WAIT_READY AND m_axis_tready = '1') THEN
+                    -- Update convolution matrix position, image position and check for zero padding
+                    IF col_mat_idx_nxt = 1 AND col = (2 ** LOG2_N_COLS - 1) THEN
+                        IF row_mat_idx_nxt = 1 AND row = (2 ** LOG2_N_ROWS - 1) THEN
+                            -- Last pixel and last kernel position: finish convolution
+                            IF tlast = '0' THEN
+                                trigger <= '1'; -- Send last data
+                                tlast <= '1';
+                            END IF;
+
+                        ELSIF row_mat_idx_nxt = 2 THEN
+                            -- End of kernel, move to next image row
+                            col <= (OTHERS => '0');
+                            row <= row + 1;
+
+                            row_mat_idx_nxt <= 0;
+                            col_mat_idx_nxt <= 1; -- new row adding padding
+
+                            trigger <= '1'; -- Send data
+
+                        ELSE
+                            -- Move to next kernel row
+                            row_mat_idx_nxt <= row_mat_idx_nxt + 1;
+                            col_mat_idx_nxt <= 0;
+
+                        END IF;
+
+                    ELSIF col_mat_idx_nxt = 2 THEN
+                        IF row_mat_idx_nxt = 1 AND row = (2 ** LOG2_N_ROWS - 1) THEN
+                            -- End of kernel column at last image row, move to next image column
+                            col <= col + 1;
+
+                            row_mat_idx_nxt <= 0;
+                            col_mat_idx_nxt <= 0;
+
+                            trigger <= '1'; -- Send data
+
+                        ELSIF row_mat_idx_nxt = 2 THEN
+                            -- End of kernel column and row, move to next image column
+                            col <= col + 1;
+
+                            IF row = 0 THEN
+                                row_mat_idx_nxt <= 1; -- first row adding padding
+                            ELSE
+                                row_mat_idx_nxt <= 0;
+                            END IF;
+                            col_mat_idx_nxt <= 0;
+
+                            trigger <= '1'; -- Send data
+
+                        ELSE
+                            -- Move to next kernel column
+                            IF col = 0 THEN
+                                col_mat_idx_nxt <= 1; -- first column adding padding
+                            ELSE
+                                col_mat_idx_nxt <= 0;
+                            END IF;
+                            row_mat_idx_nxt <= row_mat_idx_nxt + 1;
+
+                        END IF;
+
+                    ELSE
+                        -- Continue kernel sweep: increment kernel column index
+                        col_mat_idx_nxt <= col_mat_idx_nxt + 1;
+
+                    END IF;
+
+                    prepare_data <= trigger; -- Pipeline trigger for data output waiting for last data
+                    ready_data <= prepare_data;
+                    send_data <= ready_data;
+
+                    row_mat_idx_prv <= row_mat_idx;
+                    col_mat_idx_prv <= col_mat_idx;
+
+                    row_mat_idx <= row_mat_idx_nxt;
+                    col_mat_idx <= col_mat_idx_nxt;
+                END IF;
+
+            END IF;
         END IF;
     END PROCESS;
 
