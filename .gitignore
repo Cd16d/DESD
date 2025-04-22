@@ -69,11 +69,3 @@ vivado*.backup.log
 
 # SDK workspace
 .sdk/
-
-# Lab2 files
-LAB2/src/lab_2/ipshared/
-LAB2/src/lab_2/ip/
-LAB2/src/lab_2/sim/
-LAB2/src/lab_2/synth/
-LAB2/src/lab_2/ui/
-LAB2/src/lab_2/hw_handoff/

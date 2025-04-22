@@ -49,7 +49,6 @@ BEGIN
                 data_buffer <= (OTHERS => '0');
 
                 m_axis_tdata <= (OTHERS => '0');
-                m_axis_tvalid_int <= '0';
 
                 s_axis_tready_int <= '0';
                 m_axis_tvalid_int <= '0';

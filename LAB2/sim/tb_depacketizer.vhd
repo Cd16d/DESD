@@ -4,11 +4,11 @@
 -- 
 -- Create Date: 04/21/2025
 -- Design Name: 
--- Module Name: tb_packetizer - Behavioral
+-- Module Name: tb_depacketizer - Behavioral
 -- Project Name: 
 -- Target Devices: 
 -- Tool Versions: 
--- Description: Testbench for packetizer
+-- Description: Testbench for depacketizer
 -- 
 -- Dependencies: 
 -- 
@@ -21,12 +21,12 @@ LIBRARY IEEE;
 USE IEEE.STD_LOGIC_1164.ALL;
 USE IEEE.NUMERIC_STD.ALL;
 
-ENTITY tb_packetizer IS
-END tb_packetizer;
+ENTITY tb_depacketizer IS
+END tb_depacketizer;
 
-ARCHITECTURE Behavioral OF tb_packetizer IS
+ARCHITECTURE Behavioral OF tb_depacketizer IS
 
-    COMPONENT packetizer IS
+    COMPONENT depacketizer IS
         GENERIC (
             HEADER : INTEGER := 16#FF#;
             FOOTER : INTEGER := 16#F1#
@@ -38,25 +38,30 @@ ARCHITECTURE Behavioral OF tb_packetizer IS
             s_axis_tdata : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
             s_axis_tvalid : IN STD_LOGIC;
             s_axis_tready : OUT STD_LOGIC;
-            s_axis_tlast : IN STD_LOGIC;
 
             m_axis_tdata : OUT STD_LOGIC_VECTOR(7 DOWNTO 0);
             m_axis_tvalid : OUT STD_LOGIC;
-            m_axis_tready : IN STD_LOGIC
+            m_axis_tready : IN STD_LOGIC;
+            m_axis_tlast : OUT STD_LOGIC
         );
     END COMPONENT;
 
+    -- Constants
+    CONSTANT HEADER : INTEGER := 16#FF#;
+    CONSTANT FOOTER : INTEGER := 16#F1#;
+
+    -- Signals
     SIGNAL clk : STD_LOGIC := '0';
     SIGNAL aresetn : STD_LOGIC := '0';
 
     SIGNAL s_axis_tdata : STD_LOGIC_VECTOR(7 DOWNTO 0) := (OTHERS => '0');
     SIGNAL s_axis_tvalid : STD_LOGIC := '0';
     SIGNAL s_axis_tready : STD_LOGIC;
-    SIGNAL s_axis_tlast : STD_LOGIC := '0';
 
     SIGNAL m_axis_tdata : STD_LOGIC_VECTOR(7 DOWNTO 0);
     SIGNAL m_axis_tvalid : STD_LOGIC;
     SIGNAL m_axis_tready : STD_LOGIC := '1';
+    SIGNAL m_axis_tlast : STD_LOGIC;
 
     -- Stimulus memory
     TYPE mem_type IS ARRAY(0 TO 7) OF STD_LOGIC_VECTOR(7 DOWNTO 0);
@@ -64,7 +69,7 @@ ARCHITECTURE Behavioral OF tb_packetizer IS
         0 => x"10",
         1 => x"20",
         2 => x"30",
-        3 => x"4",
+        3 => x"04",
         4 => x"54",
         5 => x"65",
         6 => x"73",
@@ -105,7 +110,7 @@ BEGIN
     END PROCESS;
 
     -- DUT instantiation
-    uut: packetizer
+    uut: depacketizer
         PORT MAP (
             clk => clk,
             aresetn => aresetn,
@@ -113,11 +118,11 @@ BEGIN
             s_axis_tdata => s_axis_tdata,
             s_axis_tvalid => s_axis_tvalid,
             s_axis_tready => s_axis_tready,
-            s_axis_tlast => s_axis_tlast,
 
             m_axis_tdata => m_axis_tdata,
             m_axis_tvalid => m_axis_tvalid,
-            m_axis_tready => m_axis_tready
+            m_axis_tready => m_axis_tready,
+            m_axis_tlast => m_axis_tlast
         );
 
     -- Stimulus process
@@ -135,35 +140,49 @@ BEGIN
         WAIT UNTIL rising_edge(clk);
         tready_block_req <= '0';
 
-        -- Send 4 data words as a packet
+        -- Send 4 data words as a packet with Header and Footer
+        -- Header
+        s_axis_tdata <= STD_LOGIC_VECTOR(TO_UNSIGNED(HEADER, 8));
+        s_axis_tvalid <= '1';
+        WAIT UNTIL s_axis_tvalid = '1' AND s_axis_tready = '1' AND rising_edge(clk);
+        s_axis_tvalid <= '0';
+
+        -- Data
         FOR i IN 0 TO 3 LOOP
             s_axis_tdata <= mem(i);
             s_axis_tvalid <= '1';
-            IF i = 3 THEN
-                s_axis_tlast <= '1';
-            ELSE
-                s_axis_tlast <= '0';
-            END IF;
-            -- Wait for handshake
             WAIT UNTIL s_axis_tvalid = '1' AND s_axis_tready = '1' AND rising_edge(clk);
             s_axis_tvalid <= '0';
         END LOOP;
-        s_axis_tlast <= '0';
 
-        -- Wait a bit, then send another packet of 2 words
+        -- Footer
+        s_axis_tdata <= STD_LOGIC_VECTOR(TO_UNSIGNED(FOOTER, 8));
+        s_axis_tvalid <= '1';
+        WAIT UNTIL s_axis_tvalid = '1' AND s_axis_tready = '1' AND rising_edge(clk);
+        s_axis_tvalid <= '0';
+
+        -- Wait a bit, then send another packet of 2 words with Header and Footer
         WAIT FOR 50 ns;
+
+        -- Header
+        s_axis_tdata <= STD_LOGIC_VECTOR(TO_UNSIGNED(HEADER, 8));
+        s_axis_tvalid <= '1';
+        WAIT UNTIL s_axis_tvalid = '1' AND s_axis_tready = '1' AND rising_edge(clk);
+        s_axis_tvalid <= '0';
+
+        -- Data
         FOR i IN 4 TO 5 LOOP
             s_axis_tdata <= mem(i);
             s_axis_tvalid <= '1';
-            IF i = 5 THEN
-                s_axis_tlast <= '1';
-            ELSE
-                s_axis_tlast <= '0';
-            END IF;
             WAIT UNTIL s_axis_tvalid = '1' AND s_axis_tready = '1' AND rising_edge(clk);
             s_axis_tvalid <= '0';
         END LOOP;
-        s_axis_tlast <= '0';
+
+        -- Footer
+        s_axis_tdata <= STD_LOGIC_VECTOR(TO_UNSIGNED(FOOTER, 8));
+        s_axis_tvalid <= '1';
+        WAIT UNTIL s_axis_tvalid = '1' AND s_axis_tready = '1' AND rising_edge(clk);
+        s_axis_tvalid <= '0';
 
         -- Start another tready block asynchronously
         WAIT FOR 40 ns;
@@ -171,34 +190,49 @@ BEGIN
         WAIT UNTIL rising_edge(clk);
         tready_block_req <= '0';
 
-        -- Send packet of 3 words
+        -- Send packet of 3 words with Header and Footer
         WAIT FOR 30 ns;
+
+        -- Header
+        s_axis_tdata <= STD_LOGIC_VECTOR(TO_UNSIGNED(HEADER, 8));
+        s_axis_tvalid <= '1';
+        WAIT UNTIL s_axis_tvalid = '1' AND s_axis_tready = '1' AND rising_edge(clk);
+        s_axis_tvalid <= '0';
+
+        -- Data
         FOR i IN 5 TO 7 LOOP
             s_axis_tdata <= mem(i);
             s_axis_tvalid <= '1';
-            IF i = 7 THEN
-                s_axis_tlast <= '1';
-            ELSE
-                s_axis_tlast <= '0';
-            END IF;
             WAIT UNTIL s_axis_tvalid = '1' AND s_axis_tready = '1' AND rising_edge(clk);
             s_axis_tvalid <= '0';
         END LOOP;
-        s_axis_tlast <= '0';
 
-        -- Send packet of 4 words without initial waiting
+        -- Footer
+        s_axis_tdata <= STD_LOGIC_VECTOR(TO_UNSIGNED(FOOTER, 8));
+        s_axis_tvalid <= '1';
+        WAIT UNTIL s_axis_tvalid = '1' AND s_axis_tready = '1' AND rising_edge(clk);
+        s_axis_tvalid <= '0';
+
+        -- Send packet of 4 words without initial waiting, with Header and Footer
+        -- Header
+        s_axis_tdata <= STD_LOGIC_VECTOR(TO_UNSIGNED(HEADER, 8));
+        s_axis_tvalid <= '1';
+        WAIT UNTIL s_axis_tvalid = '1' AND s_axis_tready = '1' AND rising_edge(clk);
+        s_axis_tvalid <= '0';
+
+        -- Data
         FOR i IN 2 TO 6 LOOP
             s_axis_tdata <= mem(i);
             s_axis_tvalid <= '1';
-            IF i = 6 THEN
-                s_axis_tlast <= '1';
-            ELSE
-                s_axis_tlast <= '0';
-            END IF;
             WAIT UNTIL s_axis_tvalid = '1' AND s_axis_tready = '1' AND rising_edge(clk);
             s_axis_tvalid <= '0';
         END LOOP;
-        s_axis_tlast <= '0';
+
+        -- Footer
+        s_axis_tdata <= STD_LOGIC_VECTOR(TO_UNSIGNED(FOOTER, 8));
+        s_axis_tvalid <= '1';
+        WAIT UNTIL s_axis_tvalid = '1' AND s_axis_tready = '1' AND rising_edge(clk);
+        s_axis_tvalid <= '0';
 
         WAIT;
     END PROCESS;
