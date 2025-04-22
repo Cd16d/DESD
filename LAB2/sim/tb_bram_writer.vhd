@@ -8,7 +8,7 @@
 -- Project Name: 
 -- Target Devices: 
 -- Tool Versions: 
--- Description: Testbench for bram_writer, stimulus and timing inspired by tb_img_conv.vhd
+-- Description: Testbench for bram_writer, rewritten in the style of tb_packetizer.vhd
 -- 
 -- Dependencies: 
 -- 
@@ -23,13 +23,36 @@ USE ieee.std_logic_1164.ALL;
 USE ieee.numeric_std.ALL;
 
 ENTITY tb_bram_writer IS
-END ENTITY;
+END tb_bram_writer;
 
 ARCHITECTURE sim OF tb_bram_writer IS
 
     -- Testbench constants
     CONSTANT ADDR_WIDTH : POSITIVE := 4;
-    CONSTANT IMG_SIZE   : POSITIVE := 2; -- Small size for quick simulation
+    CONSTANT IMG_SIZE   : POSITIVE := 4; -- Increased size for more memory
+
+    -- Component declaration for bram_writer
+    COMPONENT bram_writer IS
+        GENERIC (
+            ADDR_WIDTH : POSITIVE;
+            IMG_SIZE   : POSITIVE
+        );
+        PORT (
+            clk           : IN  STD_LOGIC;
+            aresetn       : IN  STD_LOGIC;
+            s_axis_tdata  : IN  STD_LOGIC_VECTOR(7 DOWNTO 0);
+            s_axis_tvalid : IN  STD_LOGIC;
+            s_axis_tready : OUT STD_LOGIC;
+            s_axis_tlast  : IN  STD_LOGIC;
+            conv_addr     : IN  STD_LOGIC_VECTOR(ADDR_WIDTH-1 DOWNTO 0);
+            conv_data     : OUT STD_LOGIC_VECTOR(6 DOWNTO 0);
+            start_conv    : OUT  STD_LOGIC;
+            done_conv     : IN  STD_LOGIC;
+            write_ok      : OUT STD_LOGIC;
+            overflow      : OUT STD_LOGIC;
+            underflow     : OUT STD_LOGIC
+        );
+    END COMPONENT;
 
     -- Signals for DUT
     SIGNAL clk           : STD_LOGIC := '0';
@@ -46,36 +69,34 @@ ARCHITECTURE sim OF tb_bram_writer IS
     SIGNAL overflow      : STD_LOGIC;
     SIGNAL underflow     : STD_LOGIC;
 
-    -- Instantiate DUT
-    COMPONENT bram_writer IS
-        GENERIC (
-            ADDR_WIDTH : POSITIVE := 4;
-            IMG_SIZE   : POSITIVE := 2
-        );
-        PORT (
-            clk           : IN  STD_LOGIC;
-            aresetn       : IN  STD_LOGIC;
-            s_axis_tdata  : IN  STD_LOGIC_VECTOR(7 DOWNTO 0);
-            s_axis_tvalid : IN  STD_LOGIC;
-            s_axis_tready : OUT STD_LOGIC;
-            s_axis_tlast  : IN  STD_LOGIC;
-            conv_addr     : IN  STD_LOGIC_VECTOR(ADDR_WIDTH-1 DOWNTO 0);
-            conv_data     : OUT STD_LOGIC_VECTOR(6 DOWNTO 0);
-            start_conv    : OUT STD_LOGIC;
-            done_conv     : IN  STD_LOGIC;
-            write_ok      : OUT STD_LOGIC;
-            overflow      : OUT STD_LOGIC;
-            underflow     : OUT STD_LOGIC
-        );
-    END COMPONENT;
+    -- Stimulus memory for input data
+    TYPE mem_type IS ARRAY(0 TO (IMG_SIZE*IMG_SIZE)-1) OF STD_LOGIC_VECTOR(7 DOWNTO 0);
+    SIGNAL mem : mem_type := (
+         0  => x"3A",
+         1  => x"7F",
+         2  => x"12",
+         3  => x"9C",
+         4  => x"55",
+         5  => x"2B",
+         6  => x"81",
+         7  => x"04",
+         8  => x"6E",
+         9  => x"F2",
+         10 => x"1D",
+         11 => x"C7",
+         12 => x"99",
+         13 => x"0A",
+         14 => x"B3",
+         15 => x"5D"
+    );
 
 BEGIN
 
     -- Clock generation
-    clk <= not clk after 5 ns;
+    clk <= NOT clk AFTER 5 ns;
 
-    -- Instantiate DUT
-    bram_writer_inst: bram_writer
+    -- DUT instantiation
+    uut: bram_writer
         GENERIC MAP (
             ADDR_WIDTH => ADDR_WIDTH,
             IMG_SIZE   => IMG_SIZE
@@ -97,51 +118,46 @@ BEGIN
         );
 
     -- Stimulus process
-    stimulus : process
-    begin
-        -- Initial reset
+    stimulus : PROCESS
+    BEGIN
+        -- Reset
         aresetn <= '0';
-        wait for 10 ns;
+        WAIT FOR 20 ns;
         aresetn <= '1';
-        wait until rising_edge(clk);
+        WAIT UNTIL rising_edge(clk);
 
         -- Send IMG_SIZE*IMG_SIZE data words
-        for i in 0 to IMG_SIZE*IMG_SIZE-1 loop
-            s_axis_tdata  <= std_logic_vector(to_unsigned(i, 8));
+        FOR i IN 0 TO IMG_SIZE*IMG_SIZE-1 LOOP
+            s_axis_tdata  <= mem(i);
             s_axis_tvalid <= '1';
-            if i = IMG_SIZE*IMG_SIZE-1 then
+            IF i = IMG_SIZE*IMG_SIZE-1 THEN
                 s_axis_tlast <= '1';
-            else
+            ELSE
                 s_axis_tlast <= '0';
-            end if;
-            wait until rising_edge(clk);
-            -- Wait for ready
-            while s_axis_tready /= '1' loop
-                wait until rising_edge(clk);
-            end loop;
-        end loop;
-        s_axis_tvalid <= '0';
-        s_axis_tlast  <= '0';
+            END IF;
+            -- Wait for handshake
+            WAIT UNTIL s_axis_tvalid = '1' AND s_axis_tready = '1' AND rising_edge(clk);
+            s_axis_tvalid <= '0';
+        END LOOP;
+        s_axis_tlast <= '0';
 
         -- Wait for write_ok and start_conv
-        wait until write_ok = '1';
-        wait until rising_edge(clk);
+        WAIT UNTIL write_ok = '1';
+        WAIT UNTIL rising_edge(clk);
 
-        -- Require data
-        for i in 0 to IMG_SIZE*IMG_SIZE-1 loop
+        -- Read out data using conv_addr
+        FOR i IN 0 TO IMG_SIZE*IMG_SIZE-1 LOOP
             conv_addr <= std_logic_vector(to_unsigned(i, ADDR_WIDTH));
-            wait until rising_edge(clk);
-        end loop;
+            WAIT UNTIL rising_edge(clk);
+        END LOOP;
 
         -- Simulate convolution done
         done_conv <= '1';
-        wait until rising_edge(clk);
+        WAIT UNTIL rising_edge(clk);
         done_conv <= '0';
 
         -- Wait and finish
-        wait for 20 ns;
-        assert false report "Simulation finished." severity note;
-        wait;
-    end process;
+        WAIT;
+    END PROCESS;
 
-END ARCHITECTURE;
+END sim;

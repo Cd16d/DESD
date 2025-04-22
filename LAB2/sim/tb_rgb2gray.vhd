@@ -56,11 +56,9 @@ ARCHITECTURE Behavioral OF rgb2gray_tb IS
 
     SIGNAL tready_block_req : STD_LOGIC := '0';
 
-    CONSTANT clk_period : TIME := 10 ns;
-
 BEGIN
 
-    clk <= NOT clk AFTER clk_period / 2; -- Clock generation
+    clk <= NOT clk AFTER 5 ns; -- Clock generation
 
     -- Asynchronous tready block process (simulate downstream backpressure)
     PROCESS (clk)
@@ -123,12 +121,12 @@ BEGIN
             FOR j IN 0 TO 2 LOOP
                 s_axis_tdata <= rgb_mem(i, j);
                 s_axis_tvalid <= '1';
-                IF i = 2 AND j = 2 THEN
+                -- Assert tlast at the end of the first group (i=2, j=2)
+                IF (i = 2 AND j = 2) THEN
                     s_axis_tlast <= '1';
                 ELSE
                     s_axis_tlast <= '0';
                 END IF;
-                -- Wait for handshake
                 WAIT UNTIL s_axis_tvalid = '1' AND s_axis_tready = '1' AND rising_edge(clk);
                 s_axis_tvalid <= '0';
             END LOOP;
@@ -141,7 +139,8 @@ BEGIN
             FOR j IN 0 TO 2 LOOP
                 s_axis_tdata <= rgb_mem(i, j);
                 s_axis_tvalid <= '1';
-                IF i = 4 AND j = 2 THEN
+                -- Assert tlast at the end of this group (i=4, j=2)
+                IF (i = 4 AND j = 2) THEN
                     s_axis_tlast <= '1';
                 ELSE
                     s_axis_tlast <= '0';
@@ -164,7 +163,8 @@ BEGIN
             FOR j IN 0 TO 2 LOOP
                 s_axis_tdata <= rgb_mem(i, j);
                 s_axis_tvalid <= '1';
-                IF i = 6 AND j = 2 THEN
+                -- Assert tlast at the end of this group (i=6, j=2)
+                IF (i = 6 AND j = 2) THEN
                     s_axis_tlast <= '1';
                 ELSE
                     s_axis_tlast <= '0';
@@ -180,7 +180,8 @@ BEGIN
             FOR j IN 0 TO 2 LOOP
                 s_axis_tdata <= rgb_mem(i, j);
                 s_axis_tvalid <= '1';
-                IF i = 8 AND j = 2 THEN
+                -- Assert tlast at the very end (i=8, j=2)
+                IF (i = 8 AND j = 2) THEN
                     s_axis_tlast <= '1';
                 ELSE
                     s_axis_tlast <= '0';
