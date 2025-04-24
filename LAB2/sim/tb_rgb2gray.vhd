@@ -43,15 +43,15 @@ ARCHITECTURE Behavioral OF rgb2gray_tb IS
     -- Stimulus memory for RGB triplets (R, G, B)
     TYPE rgb_mem_type IS ARRAY(0 TO 8, 0 TO 2) OF STD_LOGIC_VECTOR(7 DOWNTO 0);
     SIGNAL rgb_mem : rgb_mem_type := (
-        (x"10", x"20", x"30"),
-        (x"40", x"50", x"60"),
-        (x"70", x"80", x"90"),
-        (x"A0", x"B0", x"C0"),
-        (x"D0", x"E0", x"F0"),
-        (x"01", x"02", x"03"),
-        (x"04", x"05", x"06"),
-        (x"07", x"08", x"09"),
-        (x"0A", x"0B", x"0C")
+        (x"1A", x"2F", x"7C"),
+        (x"05", x"7F", x"3B"),
+        (x"4D", x"12", x"6E"),
+        (x"7E", x"01", x"23"),
+        (x"3C", x"55", x"7A"),
+        (x"2B", x"0F", x"6D"),
+        (x"7B", x"7D", x"7C"),
+        (x"6A", x"3E", x"27"),
+        (x"0C", x"5A", x"7F")
     );
 
     SIGNAL tready_block_req : STD_LOGIC := '0';

@@ -36,6 +36,9 @@ BEGIN
     -- 4. The final grayscale value is extracted from the result and converted back to a std_logic_vector.
 
     -- Calculate the sum of the RGB channels
+    -- The addition of 2 is used to implement rounding when dividing by 3.
+    -- This is a common technique: adding half of the divisor (3/2 ? 2) before division
+    -- ensures that the result is rounded to the nearest integer instead of truncated.
     sum_extended <= dividend + TO_UNSIGNED(2, BIT_DEPTH + 2);
 
     -- Multiply the sum by the precomputed multiplier
