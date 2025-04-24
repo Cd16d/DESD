@@ -73,7 +73,7 @@ ARCHITECTURE Behavioral OF tb_depacketizer IS
         4 => x"54",
         5 => x"65",
         6 => x"73",
-        7 => x"90"
+        7 => x"50"
     );
 
     SIGNAL tready_block_req : STD_LOGIC := '0';
