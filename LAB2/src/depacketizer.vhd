@@ -1,6 +1,8 @@
+---------- DEFAULT LIBRARIES -------
 LIBRARY ieee;
 USE ieee.std_logic_1164.ALL;
 USE ieee.numeric_std.ALL;
+------------------------------------
 
 ENTITY depacketizer IS
 
@@ -21,7 +23,7 @@ ENTITY depacketizer IS
         m_axis_tready : IN STD_LOGIC;
         m_axis_tlast : OUT STD_LOGIC
     );
-    
+
 END ENTITY depacketizer;
 
 ARCHITECTURE rtl OF depacketizer IS
@@ -51,7 +53,7 @@ BEGIN
                 state <= WAITING_HEADER;
                 m_axis_tdata_int <= (OTHERS => '0');
                 m_axis_tlast_int <= '0';
-                s_axis_tready_int <= '1';
+                s_axis_tready_int <= '0';
                 m_axis_tvalid_int <= '0';
                 data_buffer <= (OTHERS => '0');
                 data_ready <= '0';
@@ -63,6 +65,7 @@ BEGIN
                         s_axis_tready_int <= '1';
                         m_axis_tvalid_int <= '0';
                         data_ready <= '0';
+                        -- Wait for header value to start receiving data
                         IF s_axis_tvalid = '1' AND s_axis_tready_int = '1' THEN
                             IF s_axis_tdata = STD_LOGIC_VECTOR(to_unsigned(HEADER, 8)) THEN
                                 state <= RECEIVING;
@@ -75,6 +78,7 @@ BEGIN
                                 m_axis_tdata_int <= data_buffer;
                                 m_axis_tvalid_int <= '1';
 
+                                -- Check for footer value to signal end of packet
                                 IF s_axis_tdata = STD_LOGIC_VECTOR(to_unsigned(FOOTER, 8)) THEN
                                     m_axis_tlast_int <= '1';
                                     state <= WAITING_HEADER;

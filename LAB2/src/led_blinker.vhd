@@ -1,78 +1,86 @@
-library ieee;
-use ieee.std_logic_1164.all;
-use ieee.numeric_std.all;
-use ieee.math_real.all;
+---------- DEFAULT LIBRARIES -------
+LIBRARY ieee;
+USE ieee.std_logic_1164.ALL;
+USE ieee.numeric_std.ALL;
+USE ieee.math_real.ALL;
+------------------------------------
 
-entity led_blinker is
-    generic (
-        CLK_PERIOD_NS   : positive := 10;
-        BLINK_PERIOD_MS : positive := 1000;
-        N_BLINKS        : positive := 4
+ENTITY led_blinker IS
+    GENERIC (
+        CLK_PERIOD_NS : POSITIVE := 10;
+        BLINK_PERIOD_MS : POSITIVE := 1000;
+        N_BLINKS : POSITIVE := 4
     );
-    port (
-        clk         : in  std_logic;
-        aresetn     : in  std_logic;
-        start_blink : in  std_logic;
-        led         : out std_logic
+    PORT (
+        clk : IN STD_LOGIC;
+        aresetn : IN STD_LOGIC;
+        start_blink : IN STD_LOGIC;
+        led : OUT STD_LOGIC
     );
-end entity;
+END ENTITY;
 
-architecture rtl of led_blinker is
-    -- Calcoli per larghezze e valori massimi
-    constant CLK_PER_MS  : integer := 1_000_000 / CLK_PERIOD_NS;
-    constant MAX_COUNT   : integer := CLK_PER_MS * BLINK_PERIOD_MS;
-    constant CNT_WIDTH   : integer := integer(ceil(log2(real(MAX_COUNT))));
-    constant BLINK_WIDTH : integer := integer(ceil(log2(real(N_BLINKS + 1))));
+ARCHITECTURE rtl OF led_blinker IS
+    -- Calculations for widths and maximum values
+    CONSTANT CLK_PER_MS : INTEGER := 1_000_000 / CLK_PERIOD_NS; -- Clock cycles per millisecond
+    CONSTANT MAX_COUNT : INTEGER := CLK_PER_MS * BLINK_PERIOD_MS; -- Counter max value for one blink period
+    CONSTANT CNT_WIDTH : INTEGER := INTEGER(ceil(log2(real(MAX_COUNT)))); -- Bit width for counter
+    CONSTANT BLINK_WIDTH : INTEGER := INTEGER(ceil(log2(real(N_BLINKS + 1)))); -- Bit width for blink counter
 
-    signal counter       : unsigned(CNT_WIDTH-1 downto 0) := (others => '0');
-    signal blink_cnt     : unsigned(BLINK_WIDTH-1 downto 0) := (others => '0');
-    signal blinking      : std_logic := '0';
-    signal led_reg       : std_logic := '0';
+    SIGNAL counter : unsigned(CNT_WIDTH - 1 DOWNTO 0) := (OTHERS => '0'); -- Main blink period counter
+    SIGNAL blink_cnt : unsigned(BLINK_WIDTH - 1 DOWNTO 0) := (OTHERS => '0'); -- Number of completed blinks
+    SIGNAL blinking : STD_LOGIC := '0'; -- Indicates if blinking is active
+    SIGNAL led_reg : STD_LOGIC := '0'; -- Register for LED output
 
-    signal start_prev    : std_logic := '0';
-    signal start_edge    : std_logic;
+    SIGNAL start_prev : STD_LOGIC := '0'; -- Previous value of start_blink
+    SIGNAL start_edge : STD_LOGIC; -- Rising edge detector for start_blink
 
-begin
+BEGIN
+    -- Output assignment
     led <= led_reg;
 
-    process(clk, aresetn)
-    begin
-        if aresetn = '0' then
-            counter    <= (others => '0');
-            blink_cnt  <= (others => '0');
-            blinking   <= '0';
-            led_reg    <= '0';
+    -- Main process: handles blinking logic and state
+    PROCESS (clk, aresetn)
+    BEGIN
+        IF aresetn = '0' THEN
+            -- Asynchronous reset: clear all registers and outputs
+            counter <= (OTHERS => '0');
+            blink_cnt <= (OTHERS => '0');
+            blinking <= '0';
+            led_reg <= '0';
             start_prev <= '0';
             start_edge <= '0';
 
-        elsif rising_edge(clk) then
-            -- Rileva fronte di salita di start_blink
-            start_edge <= start_blink and not start_prev;
+        ELSIF rising_edge(clk) THEN
+            -- Detect rising edge on start_blink input
+            start_edge <= start_blink AND NOT start_prev;
             start_prev <= start_blink;
 
-            if blinking = '0' then
-                if start_edge = '1' then
-                    blinking   <= '1';
-                    counter    <= (others => '0');
-                    blink_cnt  <= (others => '0');
-                    led_reg    <= '1';
-                end if;
-            else  -- blinking = '1'
-                if counter = to_unsigned(MAX_COUNT - 1, counter'length) then
-                    counter <= (others => '0');
-                    led_reg <= not led_reg;
+            IF blinking = '0' THEN
+                -- Idle state: wait for start_blink rising edge to begin blinking
+                IF start_edge = '1' THEN
+                    blinking <= '1';
+                    counter <= (OTHERS => '0');
+                    blink_cnt <= (OTHERS => '0');
+                    led_reg <= '1'; -- Start with LED ON
+                END IF;
+            ELSE -- blinking = '1'
+                -- Blinking state: count clock cycles for ON/OFF periods
+                IF counter = to_unsigned(MAX_COUNT - 1, counter'length) THEN
+                    counter <= (OTHERS => '0');
+                    led_reg <= NOT led_reg; -- Toggle LED state
 
-                    if led_reg = '1' then  -- fine fase ON
+                    IF led_reg = '1' THEN -- End of ON phase
                         blink_cnt <= blink_cnt + 1;
-                        if blink_cnt + 1 = to_unsigned(N_BLINKS, blink_cnt'length) then
-                            blinking <= '0';
-                            led_reg  <= '0';
-                        end if;
-                    end if;
-                else
-                    counter <= counter + 1;
-                end if;
-            end if;
-        end if;
-    end process;
-end architecture;
+                        -- Check if required number of blinks is reached
+                        IF blink_cnt + 1 = to_unsigned(N_BLINKS, blink_cnt'length) THEN
+                            blinking <= '0'; -- Stop blinking
+                            led_reg <= '0'; -- Ensure LED is OFF at end
+                        END IF;
+                    END IF;
+                ELSE
+                    counter <= counter + 1; -- Increment counter
+                END IF;
+            END IF;
+        END IF;
+    END PROCESS;
+END ARCHITECTURE;

@@ -1,6 +1,8 @@
+---------- DEFAULT LIBRARIES -------
 LIBRARY IEEE;
 USE IEEE.STD_LOGIC_1164.ALL;
 USE IEEE.NUMERIC_STD.ALL;
+------------------------------------
 
 ENTITY rgb2gray IS
     PORT (

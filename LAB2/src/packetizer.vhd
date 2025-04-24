@@ -1,6 +1,8 @@
+---------- DEFAULT LIBRARIES -------
 LIBRARY ieee;
 USE ieee.std_logic_1164.ALL;
 USE ieee.numeric_std.ALL;
+------------------------------------
 
 ENTITY packetizer IS
     GENERIC (
@@ -32,7 +34,7 @@ ARCHITECTURE rtl OF packetizer IS
     SIGNAL s_axis_tready_int : STD_LOGIC;
     SIGNAL m_axis_tvalid_int : STD_LOGIC;
 
-    SIGNAL trigger : STD_LOGIC := '0';
+    SIGNAL trigger : STD_LOGIC := '0'; -- Used to control when to send data
 
 BEGIN
 
@@ -45,57 +47,62 @@ BEGIN
         IF rising_edge(clk) THEN
             IF aresetn = '0' THEN
                 state <= SENDING_HEADER;
-
                 data_buffer <= (OTHERS => '0');
-
                 m_axis_tdata <= (OTHERS => '0');
-
                 s_axis_tready_int <= '0';
                 m_axis_tvalid_int <= '0';
 
             ELSE
 
                 -- Input data - slave
-                s_axis_tready_int <= m_axis_tready;
-
                 IF s_axis_tvalid = '1' AND s_axis_tready_int = '1' THEN
                     data_buffer <= s_axis_tdata;
                 END IF;
 
-                -- Output data - master
+                -- Clear valid flag when master interface is ready
                 IF m_axis_tready = '1' THEN
                     m_axis_tvalid_int <= '0';
                 END IF;
 
-                IF trigger = '1' AND (m_axis_tvalid_int = '0' OR m_axis_tready = '1') THEN
-                    m_axis_tvalid_int <= '1';
-                    m_axis_tdata <= data_buffer;
+                -- Send data when triggered
+                IF trigger = '1' THEN
+                    IF (m_axis_tvalid_int = '0' OR m_axis_tready = '1') THEN
+                        m_axis_tvalid_int <= '1';
+                        m_axis_tdata <= data_buffer;
+                        s_axis_tready_int <= '1'; -- Enable slave interface
 
-                    trigger <= '0';
+                        trigger <= '0';
+                    ELSE
+                        s_axis_tready_int <= '0'; -- Block slave interface to avoid data loss
+                    END IF;
                 END IF;
 
                 -- State machine for packetization
                 CASE state IS
 
                     WHEN SENDING_HEADER =>
+                        s_axis_tready_int <= '1'; -- Enable slave interface
                         IF s_axis_tvalid = '1' AND s_axis_tready_int = '1' THEN
-                            m_axis_tdata <= STD_LOGIC_VECTOR(to_unsigned(HEADER, 8)); -- Prepare header
-                            m_axis_tvalid_int <= '1'; --Send header
+                            m_axis_tdata <= STD_LOGIC_VECTOR(to_unsigned(HEADER, 8)); -- Send header
+                            m_axis_tvalid_int <= '1';
+                            s_axis_tready_int <= m_axis_tready;
 
                             IF s_axis_tlast = '1' THEN
-                                s_axis_tready_int <= '0'; -- Block the slave interface to avoid data loss
+                                s_axis_tready_int <= '0'; -- Block slave interface if last
                                 state <= SENDING_FOOTER;
                             ELSE
                                 state <= STREAMING;
                             END IF;
-                            
+
                             trigger <= '1';
                         END IF;
 
                     WHEN STREAMING =>
                         IF s_axis_tvalid = '1' AND s_axis_tready_int = '1' THEN
+                            s_axis_tready_int <= m_axis_tready;
+
                             IF s_axis_tlast = '1' THEN
-                                s_axis_tready_int <= '0'; -- Block the slave interface to avoid data loss
+                                s_axis_tready_int <= '0'; -- Block slave interface if last
                                 state <= SENDING_FOOTER;
                             END IF;
 
@@ -104,7 +111,7 @@ BEGIN
 
                     WHEN SENDING_FOOTER =>
                         IF m_axis_tvalid_int = '0' OR m_axis_tready = '1' THEN
-                            s_axis_tready_int <= '0'; -- Block the slave interface to avoid data loss
+                            s_axis_tready_int <= '0'; -- Block slave interface
 
                             data_buffer <= STD_LOGIC_VECTOR(to_unsigned(FOOTER, 8)); -- Send footer
                             m_axis_tvalid_int <= '1';
@@ -119,4 +126,4 @@ BEGIN
 
     END PROCESS;
 
-END ARCHITECTURE rtl;
+END ARCHITECTURE;

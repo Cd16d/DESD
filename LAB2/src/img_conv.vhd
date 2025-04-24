@@ -1,6 +1,8 @@
+---------- DEFAULT LIBRARIES -------
 LIBRARY ieee;
 USE ieee.std_logic_1164.ALL;
 USE ieee.numeric_std.ALL;
+------------------------------------
 
 ENTITY img_conv IS
     GENERIC (
@@ -27,18 +29,23 @@ ENTITY img_conv IS
 END ENTITY img_conv;
 
 ARCHITECTURE rtl OF img_conv IS
+    -- 3x3 convolution matrix (kernel)
     TYPE conv_mat_type IS ARRAY(0 TO 2, 0 TO 2) OF INTEGER;
     CONSTANT conv_mat : conv_mat_type := ((-1, -1, -1), (-1, 8, -1), (-1, -1, -1));
 
+    -- Offset arrays for kernel position relative to current pixel
     TYPE offset_array IS ARRAY(0 TO 2) OF INTEGER;
     CONSTANT offset : offset_array := (-1, 0, 1);
 
+    -- State machine for convolution process
     TYPE state_type IS (IDLE, START_CONVOLUTING, CONVOLUTING, WAIT_READY);
     SIGNAL state : state_type := IDLE;
 
+    -- Current column and row in the image
     SIGNAL col : UNSIGNED(LOG2_N_COLS - 1 DOWNTO 0) := (OTHERS => '0');
     SIGNAL row : UNSIGNED(LOG2_N_ROWS - 1 DOWNTO 0) := (OTHERS => '0');
 
+    -- Indices for kernel matrix position (previous, current, next)
     SIGNAL col_mat_idx_prv : INTEGER := 0;
     SIGNAL row_mat_idx_prv : INTEGER := 0;
 
@@ -48,10 +55,12 @@ ARCHITECTURE rtl OF img_conv IS
     SIGNAL col_mat_idx_nxt : INTEGER := 0;
     SIGNAL row_mat_idx_nxt : INTEGER := 0;
 
+    -- Accumulators for convolution result
     SIGNAL conv_data_out, conv_data_int, conv_data_mul : SIGNED(10 DOWNTO 0) := (OTHERS => '0');
 
     SIGNAL m_axis_tvalid_int : STD_LOGIC;
 
+    -- Control signals for data flow and pipelining
     SIGNAL trigger, prepare_data, ready_data, send_data : STD_LOGIC := '0';
     SIGNAL tlast : STD_LOGIC := '0';
     SIGNAL save_data : STD_LOGIC := '0';
@@ -65,7 +74,7 @@ BEGIN
         IF rising_edge(clk) THEN
             IF aresetn = '0' THEN
 
-                -- Reset all signals
+                -- Reset all signals and state
                 state <= IDLE;
 
                 col <= (OTHERS => '0');
@@ -100,13 +109,13 @@ BEGIN
                 conv_addr <= (OTHERS => '0');
 
             ELSE
-                -- Default values for signals
+                -- Default values for signals at each clock
                 done_conv <= '0';
                 m_axis_tlast <= '0';
 
                 CASE state IS
                     WHEN IDLE =>
-                        -- Default values in IDLE
+                        -- Wait for start_conv signal to begin convolution
                         done_conv <= '0';
                         m_axis_tlast <= '0';
                         m_axis_tvalid_int <= '0';
@@ -125,7 +134,7 @@ BEGIN
                         IF start_conv = '1' THEN
                             state <= START_CONVOLUTING;
 
-                            -- Reset the convolution matrix position
+                            -- Reset image pointers
                             row <= (OTHERS => '0');
                             col <= (OTHERS => '0');
 
@@ -156,6 +165,7 @@ BEGIN
                         END IF;
 
                     WHEN START_CONVOLUTING =>
+                        -- Start the convolution process or resume from the previous state
                         conv_addr <= STD_LOGIC_VECTOR(
                             TO_UNSIGNED(
                             (TO_INTEGER(col) + offset(col_mat_idx_nxt)) +
@@ -167,7 +177,7 @@ BEGIN
                         state <= CONVOLUTING;
 
                     WHEN CONVOLUTING =>
-                        -- Convolution operation: accumulate the result of current pixel and kernel coefficient
+                        -- Perform convolution: multiply input by kernel coefficient and accumulate
                         conv_addr <= STD_LOGIC_VECTOR(
                             TO_UNSIGNED(
                             (TO_INTEGER(col) + offset(col_mat_idx_nxt)) +
@@ -191,7 +201,7 @@ BEGIN
                         trigger <= '0';
 
                     WHEN WAIT_READY =>
-                        -- Wait for m_axis_tready signal to be asserted before sending data and continue convolution
+                        -- Wait for m_axis_tready signal before sending data and continuing
                         IF m_axis_tready = '1' THEN
                             conv_addr <= STD_LOGIC_VECTOR(
                                 TO_UNSIGNED(
@@ -205,6 +215,7 @@ BEGIN
                             state <= CONVOLUTING;
                         END IF;
 
+                        -- Save convolution result only once per WAIT_READY state
                         IF save_data = '0' THEN
                             conv_data_mul <= RESIZE(
                                 SIGNED('0' & conv_data) * TO_SIGNED(conv_mat(col_mat_idx_prv, row_mat_idx_prv), 5),
@@ -228,11 +239,12 @@ BEGIN
                     m_axis_tvalid_int <= '0';
                 END IF;
 
-                -- Wait for m_axis_tready signal to be asserted before continuing convolution
+                -- If output not ready, wait before continuing
                 IF m_axis_tready = '0' AND m_axis_tvalid_int = '1' THEN
                     state <= WAIT_READY;
                 END IF;
 
+                -- Send data when ready and output interface is available
                 IF send_data = '1' AND (m_axis_tvalid_int = '0' OR m_axis_tready = '1') THEN
                     m_axis_tvalid_int <= '1';
 
@@ -243,6 +255,7 @@ BEGIN
                         tlast <= '0';
                     END IF;
 
+                    -- Clamp output to 0..127 range
                     IF conv_data_out < 0 THEN
                         m_axis_tdata <= STD_LOGIC_VECTOR(TO_UNSIGNED(0, m_axis_tdata'length));
                     ELSIF conv_data_out > 127 THEN
@@ -256,8 +269,9 @@ BEGIN
                     send_data <= '0';
                 END IF;
 
+                -- Main kernel/image sweep logic
                 IF state = CONVOLUTING OR state = START_CONVOLUTING OR (state = WAIT_READY AND m_axis_tready = '1') THEN
-                    -- Update convolution matrix position, image position and check for zero padding
+                    -- Update kernel and image indices, handle zero padding and end conditions
                     IF col_mat_idx_nxt = 1 AND col = (2 ** LOG2_N_COLS - 1) THEN
                         IF row_mat_idx_nxt = 1 AND row = (2 ** LOG2_N_ROWS - 1) THEN
                             -- Last pixel and last kernel position: finish convolution
@@ -323,10 +337,12 @@ BEGIN
 
                     END IF;
 
-                    prepare_data <= trigger; -- Pipeline trigger for data output waiting for last data
+                    -- Pipeline control for output data
+                    prepare_data <= trigger;
                     ready_data <= prepare_data;
                     send_data <= ready_data;
 
+                    -- Update previous and current kernel indices
                     row_mat_idx_prv <= row_mat_idx;
                     col_mat_idx_prv <= col_mat_idx;
 

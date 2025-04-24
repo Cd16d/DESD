@@ -96,7 +96,7 @@ if test_n == 6:
 else:
     buff = mat.tobytes()
 
-    mat_gray = np.sum(mat, axis=2) // 3
+    mat_gray = np.round(np.sum(mat, axis=2) / 3).astype(np.uint8)
 
     sim_img = convolve2d(mat_gray, [[-1, -1, -1], [-1, 8, -1], [-1, -1, -1]], mode="same")
 
@@ -121,8 +121,44 @@ else:
 
 if (test_n == 6 and (res_img == mat).all()) or (res_img == sim_img).all():
     print("Image Match!")
+
+    im = Image.fromarray(res_img)
+    im.show()
 else:
     print("Image Mismatch!")
 
-im = Image.fromarray(res_img)
-im.show()
+    # Only for BW images and not for test_n == 6
+    if test_n != 6:
+        # Compute absolute difference
+        diff = np.abs(res_img.astype(np.int16) - sim_img.astype(np.int16))
+
+        # Normalize difference to 0-255 for visualization
+        if diff.max() > 0:
+            diff_norm = (diff * 255 // diff.max()).astype(np.uint8)
+        else:
+            diff_norm = diff.astype(np.uint8)
+
+        # Create a binary mask: white where difference is not zero
+        mask = (diff != 0) * 255
+        mask = mask.astype(np.uint8)
+
+        # Prepare images for side-by-side visualization
+        im_res = Image.fromarray(res_img)
+        im_diff = Image.fromarray(diff_norm)
+        im_sim = Image.fromarray(sim_img)
+
+        # Convert all to RGB for concatenation
+        im_res_rgb = im_res.convert("RGB")
+        im_diff_rgb = im_diff.convert("RGB")
+        im_sim_rgb = im_sim.convert("RGB")
+
+        # Concatenate images horizontally
+        total_width = im_res_rgb.width + im_diff_rgb.width + im_sim_rgb.width
+        max_height = max(im_res_rgb.height, im_diff_rgb.height, im_sim_rgb.height)
+        combined = Image.new("RGB", (total_width, max_height))
+
+        combined.paste(im_res_rgb, (0, 0))
+        combined.paste(im_diff_rgb, (im_res_rgb.width, 0))
+        combined.paste(im_sim_rgb, (im_res_rgb.width + im_diff_rgb.width, 0))
+
+        combined.show(title="Result | Diff | Reference")

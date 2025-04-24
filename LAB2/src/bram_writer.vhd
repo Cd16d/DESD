@@ -1,6 +1,8 @@
+---------- DEFAULT LIBRARIES -------
 LIBRARY ieee;
 USE ieee.std_logic_1164.ALL;
 USE ieee.numeric_std.ALL;
+------------------------------------
 
 ENTITY bram_writer IS
     GENERIC (
@@ -79,7 +81,7 @@ BEGIN
     -- Assign AXIS ready signal
     s_axis_tready <= s_axis_tready_int;
 
-    -- Binding BRAM data to output
+    -- Output only the lower 7 bits of BRAM data
     conv_data <= bram_data_out(6 DOWNTO 0);
 
     -- Select BRAM address based on state
@@ -116,9 +118,8 @@ BEGIN
                 -- State machine for data handling
                 CASE state IS
                     WHEN IDLE =>
-                        -- Wait for valid input data
+                        -- Wait for valid input data to start writing
                         IF s_axis_tvalid = '1' AND s_axis_tready_int = '1' THEN
-                            -- valid data received, start receiving
                             wr_addr <= (OTHERS => '0');
                             bram_we <= '1'; -- Enable write to BRAM
                             bram_data_in <= s_axis_tdata; -- Write data to BRAM
@@ -145,7 +146,7 @@ BEGIN
                         END IF;
 
                     WHEN CHECK_DATA =>
-                        -- Check for overflow/underflow
+                        -- Check for overflow/underflow after data reception
                         IF overflow_flag = '1' THEN
                             overflow <= '1';
                             overflow_flag <= '0';
@@ -156,7 +157,6 @@ BEGIN
                         ELSE
                             -- Data reception complete, start convolution
                             write_ok <= '1';
-
                             s_axis_tready_int <= '0';
                             start_conv <= '1';
                             state <= CONVOLUTION;
