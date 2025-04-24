@@ -82,8 +82,14 @@ BEGIN
                             m_axis_tdata <= STD_LOGIC_VECTOR(to_unsigned(HEADER, 8)); -- Prepare header
                             m_axis_tvalid_int <= '1'; --Send header
 
+                            IF s_axis_tlast = '1' THEN
+                                s_axis_tready_int <= '0'; -- Block the slave interface to avoid data loss
+                                state <= SENDING_FOOTER;
+                            ELSE
+                                state <= STREAMING;
+                            END IF;
+                            
                             trigger <= '1';
-                            state <= STREAMING;
                         END IF;
 
                     WHEN STREAMING =>
@@ -99,7 +105,7 @@ BEGIN
                     WHEN SENDING_FOOTER =>
                         IF m_axis_tvalid_int = '0' OR m_axis_tready = '1' THEN
                             s_axis_tready_int <= '0'; -- Block the slave interface to avoid data loss
-                            
+
                             data_buffer <= STD_LOGIC_VECTOR(to_unsigned(FOOTER, 8)); -- Send footer
                             m_axis_tvalid_int <= '1';
 

@@ -64,7 +64,7 @@ ARCHITECTURE Behavioral OF tb_packetizer IS
         0 => x"10",
         1 => x"20",
         2 => x"30",
-        3 => x"4",
+        3 => x"04",
         4 => x"54",
         5 => x"65",
         6 => x"73",
@@ -150,12 +150,12 @@ BEGIN
         END LOOP;
         s_axis_tlast <= '0';
 
-        -- Wait a bit, then send another packet of 2 words
+        -- Wait a bit, then send another packet of 1 words
         WAIT FOR 50 ns;
-        FOR i IN 4 TO 5 LOOP
+        FOR i IN 4 TO 4 LOOP
             s_axis_tdata <= mem(i);
             s_axis_tvalid <= '1';
-            IF i = 5 THEN
+            IF i = 4 THEN
                 s_axis_tlast <= '1';
             ELSE
                 s_axis_tlast <= '0';
