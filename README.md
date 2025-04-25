@@ -26,7 +26,8 @@ The course focuses on:
   - `src/`: VHDL source files  
   - `sim/`: Simulation files  
   - `cons/`: Constraint files  
-  - `vivado/`: Vivado project files 
+  - `vivado/`: Vivado project files
+  - `test/`: Test files and programs
 
 ## 🚀 Getting Started  
 

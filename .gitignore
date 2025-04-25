@@ -19,8 +19,6 @@
 *.tsi
 *.vcd
 *.vdi
-*.xml
-*.tcl
 *.ltx
 *.xci
 *.dcp
@@ -44,13 +42,15 @@
 *.qws
 *.wdf
 *.lpr
+*.xdc
+*.bxml
 
 
 # Vivado project directories
 *.sim/
 *.cache/
 *.hw/
-*.srcs/
+*.gen/
 .hwdbg/
 *.ip_user_files/
 .webtalk/
@@ -68,3 +68,14 @@ vivado*.backup.log
 
 # SDK workspace
 .sdk/
+
+# design files
+**/design/**/ipshared/
+**/design/**/ip/
+**/design/**/sim/
+**/design/**/synth/
+**/design/**/ui/
+**/design/**/hw_handoff/
+
+# Other files
+**/test/*.zip
