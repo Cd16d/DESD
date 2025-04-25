@@ -51,7 +51,6 @@
 *.cache/
 *.hw/
 *.gen/
-*.srcs/
 .hwdbg/
 *.ip_user_files/
 .webtalk/

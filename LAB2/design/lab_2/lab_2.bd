@@ -1169,20 +1169,6 @@
       }
     },
     "interface_nets": {
-      "Conn": {
-        "interface_ports": [
-          "rgb2gray_0/s_axis",
-          "depacketizer_0/m_axis",
-          "system_ila_0/SLOT_0_AXIS"
-        ]
-      },
-      "rgb2gray_0_m_axis": {
-        "interface_ports": [
-          "rgb2gray_0/m_axis",
-          "bram_writer_0/s_axis",
-          "system_ila_0/SLOT_2_AXIS"
-        ]
-      },
       "img_conv_0_m_axis": {
         "interface_ports": [
           "img_conv_0/m_axis",
@@ -1206,6 +1192,20 @@
         "interface_ports": [
           "packetizer_0/m_axis",
           "AXI4Stream_UART_0/S00_AXIS_TX"
+        ]
+      },
+      "Conn": {
+        "interface_ports": [
+          "rgb2gray_0/s_axis",
+          "depacketizer_0/m_axis",
+          "system_ila_0/SLOT_0_AXIS"
+        ]
+      },
+      "rgb2gray_0_m_axis": {
+        "interface_ports": [
+          "rgb2gray_0/m_axis",
+          "bram_writer_0/s_axis",
+          "system_ila_0/SLOT_2_AXIS"
         ]
       }
     },
