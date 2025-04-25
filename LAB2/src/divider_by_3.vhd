@@ -25,13 +25,13 @@ ARCHITECTURE Behavioral OF divider_by_3 IS
     SIGNAL mult_result : UNSIGNED(MULT_WIDTH - 1 DOWNTO 0);
     SIGNAL sum_with_offset : UNSIGNED(MULT_WIDTH - 1 DOWNTO 0);
 BEGIN
-    -- Moltiplicazione senza perdita di bit
+    -- Multiplication without loss of bits
     mult_result <= dividend * TO_UNSIGNED(DIVISION_MULTIPLIER, N - 1);
 
-    -- Somma con offset senza perdita di bit
+    -- Addition with offset, no loss of bits
     sum_with_offset <= mult_result + TO_UNSIGNED(OFFSET, MULT_WIDTH);
 
-    -- Estrazione risultato arrotondato
+    -- Extract rounded result
     result <= sum_with_offset(MULT_WIDTH - 2 DOWNTO MULT_WIDTH - BIT_DEPTH -1);
  
 END Behavioral;

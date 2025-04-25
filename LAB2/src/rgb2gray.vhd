@@ -50,12 +50,13 @@ ARCHITECTURE Behavioral OF rgb2gray IS
 
 BEGIN
 
+    -- Connect internal signals to output ports
     s_axis_tready <= s_axis_tready_int;
     m_axis_tvalid <= m_axis_tvalid_int;
     m_axis_tdata <= m_axis_tdata_int;
     m_axis_tlast <= m_axis_tlast_int;
 
-    -- Divider instance
+    -- Divider instance: divides the sum of RGB by 3 to obtain grayscale value
     DIVIDER : divider_by_3
     GENERIC MAP(
         BIT_DEPTH => 7
@@ -69,6 +70,7 @@ BEGIN
     BEGIN
         IF rising_edge(clk) THEN
             IF resetn = '0' THEN
+                -- Asynchronous reset: initialize all signals and state
                 state <= IDLE;
                 sum <= (OTHERS => '0');
                 rgb_sum <= (OTHERS => '0');
@@ -79,11 +81,12 @@ BEGIN
                 s_axis_tready_int <= '1';
                 last_seen <= '0';
             ELSE
-                -- Default assignments
+                -- Default assignments for each clock cycle
                 m_axis_tlast_int <= '0';
 
                 CASE state IS
                     WHEN IDLE =>
+                        -- Wait for the first valid input sample
                         m_axis_tdata_int <= (OTHERS => '0');
                         sum <= (OTHERS => '0');
                         count <= 0;
@@ -99,6 +102,7 @@ BEGIN
                         END IF;
 
                     WHEN ACCUMULATE =>
+                        -- Accumulate the next two color components (expecting 3 total: R, G, B)
                         IF s_axis_tvalid = '1' AND s_axis_tready_int = '1' THEN
                             sum <= sum + unsigned(s_axis_tdata);
                             IF count = 2 THEN
@@ -117,7 +121,7 @@ BEGIN
                         END IF;
 
                     WHEN WAIT_DIV =>
-                        -- Ora gray è valido
+                        -- Now gray is valid (output from divider)
                         m_axis_tdata_int <= '0' & STD_LOGIC_VECTOR(gray);
                         m_axis_tvalid_int <= '1';
                         s_axis_tready_int <= '0';
@@ -128,7 +132,7 @@ BEGIN
                         state <= SEND;
 
                     WHEN SEND =>
-                        -- Mantieni il dato finché non viene accettato
+                        -- Hold the data until it is accepted by the downstream module
                         IF m_axis_tvalid_int = '1' AND m_axis_tready = '1' THEN
                             m_axis_tvalid_int <= '0';
                             s_axis_tready_int <= '1';
