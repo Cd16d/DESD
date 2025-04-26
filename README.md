@@ -37,7 +37,7 @@ To get started with this project, follow these steps:
 1. Open a terminal (e.g., Command Prompt or PowerShell) on your Windows machine.
 2. Clone the repository using Git:  
    ```cmd
-   git clone https://git.cdtech.duckdns.org/PickleRick/DESD.git
+   git clone https://github.com/Cd16d/DESD
    ```
    This will create a folder named `DESD`.  
 3. Open the folder `\DESD` in [Visual Studio Code](https://code.visualstudio.com/).  
