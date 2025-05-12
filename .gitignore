@@ -42,7 +42,6 @@
 *.qws
 *.wdf
 *.lpr
-*.xdc
 *.bxml
 
 
@@ -76,6 +75,7 @@ vivado*.backup.log
 **/design/**/synth/
 **/design/**/ui/
 **/design/**/hw_handoff/
+**/design/**/*.xdc
 
 # Other files
 **/test/*.zip

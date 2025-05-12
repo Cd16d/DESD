@@ -15,10 +15,10 @@ lab2_lib.files = [
     "LAB2/sim/**/*.vhd"
 ]
 
-# lab3_lib.files = [
-#     "LAB3/src/**/*.vhd",
-#     "LAB3/sim/**/*.vhd"
-# ]
+lab3_lib.files = [
+    "LAB3/src/**/*.vhd",
+    "LAB3/sim/**/*.vhd"
+]
 
 xpm.files = [
   "C:/Xilinx/Vivado/2020.2/data/ip/xpm/xpm_VCOMP.vhd"
