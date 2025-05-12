@@ -13,9 +13,7 @@
     "design_tree": {
       "clk_wiz_0": "",
       "proc_sys_reset_0": "",
-      "axis_dual_i2s_0": "",
       "proc_sys_reset_1": "",
-      "axi4stream_spi_master_0": "",
       "digilent_jstk2_0": "",
       "edge_detector_toggle_0": "",
       "edge_detector_toggle_1": "",
@@ -28,7 +26,9 @@
       "effect_selector_0": "",
       "led_controller_0": "",
       "led_level_controller_0": "",
-      "mute_controller_0": ""
+      "mute_controller_0": "",
+      "axi4stream_spi_master_0": "",
+      "axis_dual_i2s_0": ""
     },
     "interface_ports": {
       "SPI_M_0": {
@@ -173,31 +173,11 @@
         "xci_path": "ip\\lab_3_proc_sys_reset_0_0\\lab_3_proc_sys_reset_0_0.xci",
         "inst_hier_path": "proc_sys_reset_0"
       },
-      "axis_dual_i2s_0": {
-        "vlnv": "DigiLAB:ip:axis_dual_i2s:1.0",
-        "xci_name": "lab_3_axis_dual_i2s_0_0",
-        "xci_path": "ip\\lab_3_axis_dual_i2s_0_0\\lab_3_axis_dual_i2s_0_0.xci",
-        "inst_hier_path": "axis_dual_i2s_0"
-      },
       "proc_sys_reset_1": {
         "vlnv": "xilinx.com:ip:proc_sys_reset:5.0",
         "xci_name": "lab_3_proc_sys_reset_1_0",
         "xci_path": "ip\\lab_3_proc_sys_reset_1_0\\lab_3_proc_sys_reset_1_0.xci",
         "inst_hier_path": "proc_sys_reset_1"
-      },
-      "axi4stream_spi_master_0": {
-        "vlnv": "DigiLAB:ip:axi4stream_spi_master:1.0",
-        "xci_name": "lab_3_axi4stream_spi_master_0_0",
-        "xci_path": "ip\\lab_3_axi4stream_spi_master_0_0\\lab_3_axi4stream_spi_master_0_0.xci",
-        "inst_hier_path": "axi4stream_spi_master_0",
-        "parameters": {
-          "c_clkfreq": {
-            "value": "215000000"
-          },
-          "c_sclkfreq": {
-            "value": "5000"
-          }
-        }
       },
       "digilent_jstk2_0": {
         "vlnv": "xilinx.com:module_ref:digilent_jstk2:1.0",
@@ -1804,6 +1784,26 @@
             "direction": "I"
           }
         }
+      },
+      "axi4stream_spi_master_0": {
+        "vlnv": "DigiLAB:ip:axi4stream_spi_master:1.0",
+        "xci_name": "lab_3_axi4stream_spi_master_0_0",
+        "xci_path": "ip\\lab_3_axi4stream_spi_master_0_0\\lab_3_axi4stream_spi_master_0_0.xci",
+        "inst_hier_path": "axi4stream_spi_master_0",
+        "parameters": {
+          "c_clkfreq": {
+            "value": "215000000"
+          },
+          "c_sclkfreq": {
+            "value": "5000"
+          }
+        }
+      },
+      "axis_dual_i2s_0": {
+        "vlnv": "DigiLAB:ip:axis_dual_i2s:1.0",
+        "xci_name": "lab_3_axis_dual_i2s_0_0",
+        "xci_path": "ip\\lab_3_axis_dual_i2s_0_0\\lab_3_axis_dual_i2s_0_0.xci",
+        "inst_hier_path": "axis_dual_i2s_0"
       }
     },
     "interface_nets": {
@@ -1885,8 +1885,6 @@
         "ports": [
           "clk_wiz_0/clk_out1",
           "proc_sys_reset_0/slowest_sync_clk",
-          "axis_dual_i2s_0/aclk",
-          "axi4stream_spi_master_0/aclk",
           "digilent_jstk2_0/aclk",
           "edge_detector_toggle_0/clk",
           "edge_detector_toggle_1/clk",
@@ -1898,7 +1896,9 @@
           "balance_controller_0/aclk",
           "effect_selector_0/aclk",
           "led_level_controller_0/aclk",
-          "mute_controller_0/aclk"
+          "mute_controller_0/aclk",
+          "axi4stream_spi_master_0/aclk",
+          "axis_dual_i2s_0/aclk"
         ]
       },
       "reset_1": {
@@ -1919,15 +1919,13 @@
       "clk_wiz_0_clk_out2": {
         "ports": [
           "clk_wiz_0/clk_out2",
-          "axis_dual_i2s_0/i2s_clk",
-          "proc_sys_reset_1/slowest_sync_clk"
+          "proc_sys_reset_1/slowest_sync_clk",
+          "axis_dual_i2s_0/i2s_clk"
         ]
       },
       "proc_sys_reset_0_peripheral_aresetn": {
         "ports": [
           "proc_sys_reset_0/peripheral_aresetn",
-          "axis_dual_i2s_0/aresetn",
-          "axi4stream_spi_master_0/aresetn",
           "digilent_jstk2_0/aresetn",
           "debouncer_0/reset",
           "axis_broadcaster_0/aresetn",
@@ -1937,7 +1935,9 @@
           "balance_controller_0/aresetn",
           "effect_selector_0/aresetn",
           "led_level_controller_0/aresetn",
-          "mute_controller_0/aresetn"
+          "mute_controller_0/aresetn",
+          "axi4stream_spi_master_0/aresetn",
+          "axis_dual_i2s_0/aresetn"
         ]
       },
       "proc_sys_reset_1_peripheral_aresetn": {

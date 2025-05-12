@@ -1176,11 +1176,11 @@
           "system_ila_0/SLOT_2_AXIS"
         ]
       },
-      "img_conv_0_m_axis": {
+      "Conn": {
         "interface_ports": [
-          "img_conv_0/m_axis",
-          "packetizer_0/s_axis",
-          "system_ila_0/SLOT_1_AXIS"
+          "rgb2gray_0/s_axis",
+          "depacketizer_0/m_axis",
+          "system_ila_0/SLOT_0_AXIS"
         ]
       },
       "AXI4Stream_UART_0_UART": {
@@ -1201,11 +1201,11 @@
           "AXI4Stream_UART_0/S00_AXIS_TX"
         ]
       },
-      "Conn": {
+      "img_conv_0_m_axis": {
         "interface_ports": [
-          "rgb2gray_0/s_axis",
-          "depacketizer_0/m_axis",
-          "system_ila_0/SLOT_0_AXIS"
+          "img_conv_0/m_axis",
+          "packetizer_0/s_axis",
+          "system_ila_0/SLOT_1_AXIS"
         ]
       }
     },
