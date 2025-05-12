@@ -3,7 +3,6 @@
     "design_info": {
       "boundary_crc": "0xFF71C05CB0B1FCB6",
       "device": "xc7a35tcpg236-1",
-      "gen_directory": "../../../../lab3.gen/sources_1/bd/lab_3",
       "name": "lab_3",
       "rev_ctrl_bd_flag": "RevCtrlBdOff",
       "synth_flow_mode": "None",
@@ -1428,8 +1427,8 @@
       },
       "led_controller_0": {
         "vlnv": "xilinx.com:module_ref:led_controller:1.0",
-        "xci_name": "lab_3_led_controller_0_1",
-        "xci_path": "ip\\lab_3_led_controller_0_1\\lab_3_led_controller_0_1.xci",
+        "xci_name": "lab_3_led_controller_0_0",
+        "xci_path": "ip\\lab_3_led_controller_0_0\\lab_3_led_controller_0_0.xci",
         "inst_hier_path": "led_controller_0",
         "reference_info": {
           "ref_type": "hdl",
@@ -1807,28 +1806,10 @@
       }
     },
     "interface_nets": {
-      "volume_controller_0_m_axis": {
-        "interface_ports": [
-          "volume_controller_0/m_axis",
-          "LFO_0/s_axis"
-        ]
-      },
-      "digilent_jstk2_0_m_axis": {
-        "interface_ports": [
-          "digilent_jstk2_0/m_axis",
-          "axi4stream_spi_master_0/S_AXIS"
-        ]
-      },
       "axis_dual_i2s_0_m_axis": {
         "interface_ports": [
           "axis_dual_i2s_0/m_axis",
           "moving_average_filte_0/s_axis"
-        ]
-      },
-      "mute_controller_0_m_axis": {
-        "interface_ports": [
-          "mute_controller_0/m_axis",
-          "axis_broadcaster_0/S_AXIS"
         ]
       },
       "LFO_0_m_axis": {
@@ -1837,22 +1818,28 @@
           "mute_controller_0/s_axis"
         ]
       },
+      "digilent_jstk2_0_m_axis": {
+        "interface_ports": [
+          "digilent_jstk2_0/m_axis",
+          "axi4stream_spi_master_0/S_AXIS"
+        ]
+      },
       "axi4stream_spi_master_0_SPI_M": {
         "interface_ports": [
           "SPI_M_0",
           "axi4stream_spi_master_0/SPI_M"
         ]
       },
-      "moving_average_filte_0_m_axis": {
+      "volume_controller_0_m_axis": {
         "interface_ports": [
-          "balance_controller_0/s_axis",
-          "moving_average_filte_0/m_axis"
+          "volume_controller_0/m_axis",
+          "LFO_0/s_axis"
         ]
       },
-      "balance_controller_0_m_axis": {
+      "mute_controller_0_m_axis": {
         "interface_ports": [
-          "balance_controller_0/m_axis",
-          "volume_controller_0/s_axis"
+          "mute_controller_0/m_axis",
+          "axis_broadcaster_0/S_AXIS"
         ]
       },
       "axis_broadcaster_0_M01_AXIS": {
@@ -1865,6 +1852,18 @@
         "interface_ports": [
           "axis_broadcaster_0/M00_AXIS",
           "axis_dual_i2s_0/s_axis"
+        ]
+      },
+      "balance_controller_0_m_axis": {
+        "interface_ports": [
+          "balance_controller_0/m_axis",
+          "volume_controller_0/s_axis"
+        ]
+      },
+      "moving_average_filte_0_m_axis": {
+        "interface_ports": [
+          "balance_controller_0/s_axis",
+          "moving_average_filte_0/m_axis"
         ]
       },
       "axi4stream_spi_master_0_M_AXIS": {
