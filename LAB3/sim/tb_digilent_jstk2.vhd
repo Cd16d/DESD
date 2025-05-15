@@ -130,23 +130,29 @@ BEGIN
         -- Main loop: wait for CMDSETLEDRGB, then send mem bytes for each byte received
         WHILE TRUE LOOP
             WAIT UNTIL rising_edge(aclk);
+
+            -- Default: s_axis_tvalid low unless sending
+            s_axis_tvalid <= '0';
+
             IF m_axis_tvalid = '1' THEN
                 IF m_axis_tdata = CMDSETLEDRGB THEN
                     send_data := TRUE;
                     mem_idx := 0;
                 END IF;
 
-                IF send_data THEN
-                    IF mem_idx <= 4 THEN
-                        s_axis_tdata <= spi_mem(mem_idx);
-                        s_axis_tvalid <= '1';
-                        mem_idx := mem_idx + 1;
-                    ELSE
+                IF send_data AND mem_idx <= 4 THEN
+                    -- Present data for one cycle when master is ready
+                    s_axis_tdata <= spi_mem(mem_idx);
+                    s_axis_tvalid <= '1';
+                    WAIT UNTIL rising_edge(aclk); -- handshake
+                    s_axis_tvalid <= '0';
+                    mem_idx := mem_idx + 1;
+                    -- Simula il tempo di risposta reale del JSTK2 (1,6 ms per byte)
+                    WAIT FOR 1600 us;
+                    IF mem_idx > 4 THEN
                         send_data := FALSE;
                     END IF;
                 END IF;
-            ELSE
-                s_axis_tvalid <= '0';
             END IF;
         END LOOP;
     END PROCESS;

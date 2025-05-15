@@ -1,10 +1,23 @@
 import serial
+import serial.tools.list_ports
 import time
 
 # CONFIGURAZIONE
-PORT = 'COM4'          # Cambia con la tua porta: es. 'COM3' su Windows o '/dev/ttyUSB0' su Linux
+BASYS3_PID = 0x6010
+BASYS3_VID = 0x0403
 BAUDRATE = 115200      # Imposta la tua velocità
 CHUNK_SIZE = 4         # 4 byte per riga
+
+# Ricerca automatica della porta Basys3
+dev = ""
+for port in serial.tools.list_ports.comports():
+    if (port.vid == BASYS3_VID and port.pid == BASYS3_PID):
+        dev = port.device
+
+if not dev:
+    raise RuntimeError("Basys 3 Not Found!")
+
+PORT = dev
 
 def receive_mode(ser):
     print("Modalità ricezione. Premi Ctrl+C per uscire.\n")
@@ -41,16 +54,20 @@ def send_mode(ser):
 
 try:
     mode = ""
-    while mode not in ["r", "s"]:
-        mode = input("Vuoi ricevere (r) o inviare (s) dati? [r/s]: ").strip().lower()
+    while mode not in ["r", "s", "4"]:
+        mode = input("Vuoi ricevere (r), inviare (s) ? [r/s]: ").strip().lower()
 
     ser = serial.Serial(PORT, BAUDRATE, timeout=1)
     print(f"Aperta porta seriale: {PORT} a {BAUDRATE} baud.\n")
 
     if mode == "r":
         receive_mode(ser)
-    else:
+    elif mode == "s":
         send_mode(ser)
+    else:
+        print("Selezione non valida. Uscita...")
+        ser.close()
+        exit(1)
 
 except KeyboardInterrupt:
     print("\nChiusura programma...")
