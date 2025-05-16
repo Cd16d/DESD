@@ -84,8 +84,8 @@
       },
       "clk_wiz_0": {
         "vlnv": "xilinx.com:ip:clk_wiz:6.0",
-        "xci_name": "diligent_jstk_clk_wiz_0_1",
-        "xci_path": "ip\\diligent_jstk_clk_wiz_0_1\\diligent_jstk_clk_wiz_0_1.xci",
+        "xci_name": "diligent_jstk_clk_wiz_0_0",
+        "xci_path": "ip\\diligent_jstk_clk_wiz_0_0_1\\diligent_jstk_clk_wiz_0_0.xci",
         "inst_hier_path": "clk_wiz_0",
         "parameters": {
           "CLK_IN1_BOARD_INTERFACE": {
@@ -591,28 +591,17 @@
       }
     },
     "interface_nets": {
-      "axi4stream_spi_master_0_SPI_M": {
-        "interface_ports": [
-          "SPI_M_0",
-          "axi4stream_spi_master_0/SPI_M"
-        ]
-      },
       "AXI4Stream_UART_0_UART": {
         "interface_ports": [
           "usb_uart",
           "AXI4Stream_UART_0/UART"
         ]
       },
-      "jstk_uart_bridge_0_m_axis": {
+      "digilent_jstk2_0_m_axis": {
         "interface_ports": [
-          "AXI4Stream_UART_0/S00_AXIS_TX",
-          "jstk_uart_bridge_0/m_axis"
-        ]
-      },
-      "AXI4Stream_UART_0_M00_AXIS_RX": {
-        "interface_ports": [
-          "AXI4Stream_UART_0/M00_AXIS_RX",
-          "jstk_uart_bridge_0/s_axis"
+          "digilent_jstk2_0/m_axis",
+          "axi4stream_spi_master_0/S_AXIS",
+          "system_ila_0/SLOT_0_AXIS"
         ]
       },
       "axi4stream_spi_master_0_M_AXIS": {
@@ -622,11 +611,22 @@
           "system_ila_0/SLOT_1_AXIS"
         ]
       },
-      "digilent_jstk2_0_m_axis": {
+      "axi4stream_spi_master_0_SPI_M": {
         "interface_ports": [
-          "digilent_jstk2_0/m_axis",
-          "axi4stream_spi_master_0/S_AXIS",
-          "system_ila_0/SLOT_0_AXIS"
+          "SPI_M_0",
+          "axi4stream_spi_master_0/SPI_M"
+        ]
+      },
+      "AXI4Stream_UART_0_M00_AXIS_RX": {
+        "interface_ports": [
+          "AXI4Stream_UART_0/M00_AXIS_RX",
+          "jstk_uart_bridge_0/s_axis"
+        ]
+      },
+      "jstk_uart_bridge_0_m_axis": {
+        "interface_ports": [
+          "AXI4Stream_UART_0/S00_AXIS_TX",
+          "jstk_uart_bridge_0/m_axis"
         ]
       }
     },

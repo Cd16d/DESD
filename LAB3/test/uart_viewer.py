@@ -1,10 +1,10 @@
 import serial
 import serial.tools.list_ports
 import time
+import queue
+import threading
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
-import threading
-import queue
 
 # CONFIGURAZIONE
 BASYS3_PID = 0x6010
@@ -24,6 +24,14 @@ if not dev:
 PORT = dev
 
 def receive_mode(ser):
+    print("Modalità ricezione. Premi Ctrl+C per uscire.\n")
+    while True:
+        if ser.in_waiting >= CHUNK_SIZE:
+            data = ser.read(CHUNK_SIZE)
+            hex_bytes = ' '.join(f"{b:02X}" for b in data)
+            print(f"HH | {hex_bytes}")
+
+def receive_graph_mode(ser):
     print("Modalità ricezione e visualizzazione coordinate in tempo reale. Premi Ctrl+C per uscire.\n")
     q = queue.Queue()
 
@@ -39,9 +47,7 @@ def receive_mode(ser):
     reader_thread = threading.Thread(target=serial_reader, daemon=True)
     reader_thread.start()
 
-    # Start with a single point at (0,0)
     latest_point = [0, 0]
-
     fig, ax = plt.subplots()
     sc = ax.scatter([latest_point[0]], [latest_point[1]])
     ax.set_xlim(0, 255)
@@ -51,12 +57,11 @@ def receive_mode(ser):
     ax.set_title("Coordinate in tempo reale")
 
     def update(frame):
-        # Update only if new data is available
         while not q.empty():
             x, y = q.get()
             latest_point[0] = x
             latest_point[1] = y
-        sc.set_offsets([latest_point])  # Note the extra brackets!
+        sc.set_offsets([latest_point])
         return sc,
 
     ani = animation.FuncAnimation(fig, update, interval=30, blit=True)
@@ -89,8 +94,8 @@ def send_mode(ser):
 
 try:
     mode = ""
-    while mode not in ["r", "s", "4"]:
-        mode = input("Vuoi ricevere (r), inviare (s) ? [r/s]: ").strip().lower()
+    while mode not in ["r", "s", "g"]:
+        mode = input("Vuoi ricevere (r), inviare (s), o ricevere con grafico (g)? [r/s/g]: ").strip().lower()
 
     ser = serial.Serial(PORT, BAUDRATE, timeout=1)
     print(f"Aperta porta seriale: {PORT} a {BAUDRATE} baud.\n")
@@ -99,6 +104,8 @@ try:
         receive_mode(ser)
     elif mode == "s":
         send_mode(ser)
+    elif mode == "g":
+        receive_graph_mode(ser)
     else:
         print("Selezione non valida. Uscita...")
         ser.close()
