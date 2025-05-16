@@ -1,6 +1,10 @@
 import serial
 import serial.tools.list_ports
 import time
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+import threading
+import queue
 
 # CONFIGURAZIONE
 BASYS3_PID = 0x6010
@@ -20,12 +24,43 @@ if not dev:
 PORT = dev
 
 def receive_mode(ser):
-    print("Modalità ricezione. Premi Ctrl+C per uscire.\n")
-    while True:
-        if ser.in_waiting >= CHUNK_SIZE:
-            data = ser.read(CHUNK_SIZE)
-            hex_bytes = ' '.join(f"{b:02X}" for b in data)
-            print(f"HH | {hex_bytes}")
+    print("Modalità ricezione e visualizzazione coordinate in tempo reale. Premi Ctrl+C per uscire.\n")
+    q = queue.Queue()
+
+    def serial_reader():
+        while True:
+            if ser.in_waiting >= CHUNK_SIZE:
+                data = ser.read(CHUNK_SIZE)
+                if len(data) >= 2:
+                    x = data[0]
+                    y = data[1]
+                    q.put((x, y))
+
+    reader_thread = threading.Thread(target=serial_reader, daemon=True)
+    reader_thread.start()
+
+    # Start with a single point at (0,0)
+    latest_point = [0, 0]
+
+    fig, ax = plt.subplots()
+    sc = ax.scatter([latest_point[0]], [latest_point[1]])
+    ax.set_xlim(0, 255)
+    ax.set_ylim(0, 255)
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    ax.set_title("Coordinate in tempo reale")
+
+    def update(frame):
+        # Update only if new data is available
+        while not q.empty():
+            x, y = q.get()
+            latest_point[0] = x
+            latest_point[1] = y
+        sc.set_offsets([latest_point])  # Note the extra brackets!
+        return sc,
+
+    ani = animation.FuncAnimation(fig, update, interval=30, blit=True)
+    plt.show()
 
 def send_mode(ser):
     print("Modalità invio. Inserisci 3 byte in esadecimale (il primo sarà sempre 'C0').")

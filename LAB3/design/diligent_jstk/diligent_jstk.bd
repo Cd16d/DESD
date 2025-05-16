@@ -5,7 +5,7 @@
       "device": "xc7a35tcpg236-1",
       "name": "diligent_jstk",
       "rev_ctrl_bd_flag": "RevCtrlBdOff",
-      "synth_flow_mode": "Hierarchical",
+      "synth_flow_mode": "None",
       "tool_version": "2020.2",
       "validated": "true"
     },
@@ -15,8 +15,8 @@
       "AXI4Stream_UART_0": "",
       "jstk_uart_bridge_0": "",
       "axi4stream_spi_master_0": "",
-      "digilent_jstk2_0": "",
-      "system_ila_0": ""
+      "system_ila_0": "",
+      "digilent_jstk2_0": ""
     },
     "interface_ports": {
       "usb_uart": {
@@ -338,6 +338,42 @@
           }
         }
       },
+      "system_ila_0": {
+        "vlnv": "xilinx.com:ip:system_ila:1.1",
+        "xci_name": "diligent_jstk_system_ila_0_0",
+        "xci_path": "ip\\diligent_jstk_system_ila_0_0\\diligent_jstk_system_ila_0_0.xci",
+        "inst_hier_path": "system_ila_0",
+        "parameters": {
+          "C_MON_TYPE": {
+            "value": "MIX"
+          },
+          "C_NUM_MONITOR_SLOTS": {
+            "value": "2"
+          },
+          "C_NUM_OF_PROBES": {
+            "value": "7"
+          },
+          "C_SLOT": {
+            "value": "1"
+          },
+          "C_SLOT_0_INTF_TYPE": {
+            "value": "xilinx.com:interface:axis_rtl:1.0"
+          },
+          "C_SLOT_1_INTF_TYPE": {
+            "value": "xilinx.com:interface:axis_rtl:1.0"
+          }
+        },
+        "interface_ports": {
+          "SLOT_0_AXIS": {
+            "mode": "Monitor",
+            "vlnv": "xilinx.com:interface:axis_rtl:1.0"
+          },
+          "SLOT_1_AXIS": {
+            "mode": "Monitor",
+            "vlnv": "xilinx.com:interface:axis_rtl:1.0"
+          }
+        }
+      },
       "digilent_jstk2_0": {
         "vlnv": "xilinx.com:module_ref:digilent_jstk2:1.0",
         "xci_name": "diligent_jstk_digilent_jstk2_0_0",
@@ -552,39 +588,21 @@
             "right": "0"
           }
         }
-      },
-      "system_ila_0": {
-        "vlnv": "xilinx.com:ip:system_ila:1.1",
-        "xci_name": "diligent_jstk_system_ila_0_0",
-        "xci_path": "ip\\diligent_jstk_system_ila_0_0\\diligent_jstk_system_ila_0_0.xci",
-        "inst_hier_path": "system_ila_0",
-        "parameters": {
-          "C_NUM_MONITOR_SLOTS": {
-            "value": "2"
-          },
-          "C_SLOT": {
-            "value": "1"
-          },
-          "C_SLOT_0_INTF_TYPE": {
-            "value": "xilinx.com:interface:axis_rtl:1.0"
-          },
-          "C_SLOT_1_INTF_TYPE": {
-            "value": "xilinx.com:interface:axis_rtl:1.0"
-          }
-        },
-        "interface_ports": {
-          "SLOT_0_AXIS": {
-            "mode": "Monitor",
-            "vlnv": "xilinx.com:interface:axis_rtl:1.0"
-          },
-          "SLOT_1_AXIS": {
-            "mode": "Monitor",
-            "vlnv": "xilinx.com:interface:axis_rtl:1.0"
-          }
-        }
       }
     },
     "interface_nets": {
+      "axi4stream_spi_master_0_SPI_M": {
+        "interface_ports": [
+          "SPI_M_0",
+          "axi4stream_spi_master_0/SPI_M"
+        ]
+      },
+      "AXI4Stream_UART_0_UART": {
+        "interface_ports": [
+          "usb_uart",
+          "AXI4Stream_UART_0/UART"
+        ]
+      },
       "jstk_uart_bridge_0_m_axis": {
         "interface_ports": [
           "AXI4Stream_UART_0/S00_AXIS_TX",
@@ -597,13 +615,6 @@
           "jstk_uart_bridge_0/s_axis"
         ]
       },
-      "digilent_jstk2_0_m_axis": {
-        "interface_ports": [
-          "digilent_jstk2_0/m_axis",
-          "axi4stream_spi_master_0/S_AXIS",
-          "system_ila_0/SLOT_0_AXIS"
-        ]
-      },
       "axi4stream_spi_master_0_M_AXIS": {
         "interface_ports": [
           "axi4stream_spi_master_0/M_AXIS",
@@ -611,16 +622,11 @@
           "system_ila_0/SLOT_1_AXIS"
         ]
       },
-      "AXI4Stream_UART_0_UART": {
+      "digilent_jstk2_0_m_axis": {
         "interface_ports": [
-          "usb_uart",
-          "AXI4Stream_UART_0/UART"
-        ]
-      },
-      "axi4stream_spi_master_0_SPI_M": {
-        "interface_ports": [
-          "SPI_M_0",
-          "axi4stream_spi_master_0/SPI_M"
+          "digilent_jstk2_0/m_axis",
+          "axi4stream_spi_master_0/S_AXIS",
+          "system_ila_0/SLOT_0_AXIS"
         ]
       }
     },
@@ -653,49 +659,56 @@
           "AXI4Stream_UART_0/m00_axis_rx_aclk",
           "jstk_uart_bridge_0/aclk",
           "AXI4Stream_UART_0/s00_axis_tx_aclk",
-          "digilent_jstk2_0/aclk",
-          "system_ila_0/clk"
+          "system_ila_0/clk",
+          "digilent_jstk2_0/aclk"
         ]
       },
       "digilent_jstk2_0_btn_trigger": {
         "ports": [
           "digilent_jstk2_0/btn_trigger",
-          "jstk_uart_bridge_0/btn_trigger"
+          "jstk_uart_bridge_0/btn_trigger",
+          "system_ila_0/probe6"
         ]
       },
       "digilent_jstk2_0_btn_jstk": {
         "ports": [
           "digilent_jstk2_0/btn_jstk",
-          "jstk_uart_bridge_0/btn_jstk"
+          "jstk_uart_bridge_0/btn_jstk",
+          "system_ila_0/probe5"
         ]
       },
       "digilent_jstk2_0_jstk_y": {
         "ports": [
           "digilent_jstk2_0/jstk_y",
-          "jstk_uart_bridge_0/jstk_y"
+          "jstk_uart_bridge_0/jstk_y",
+          "system_ila_0/probe4"
         ]
       },
       "digilent_jstk2_0_jstk_x": {
         "ports": [
           "digilent_jstk2_0/jstk_x",
-          "jstk_uart_bridge_0/jstk_x"
+          "jstk_uart_bridge_0/jstk_x",
+          "system_ila_0/probe3"
         ]
       },
       "jstk_uart_bridge_0_led_r": {
         "ports": [
           "jstk_uart_bridge_0/led_r",
+          "system_ila_0/probe0",
           "digilent_jstk2_0/led_r"
         ]
       },
       "jstk_uart_bridge_0_led_g": {
         "ports": [
           "jstk_uart_bridge_0/led_g",
+          "system_ila_0/probe1",
           "digilent_jstk2_0/led_g"
         ]
       },
       "jstk_uart_bridge_0_led_b": {
         "ports": [
           "jstk_uart_bridge_0/led_b",
+          "system_ila_0/probe2",
           "digilent_jstk2_0/led_b"
         ]
       },
@@ -706,8 +719,8 @@
           "jstk_uart_bridge_0/aresetn",
           "AXI4Stream_UART_0/s00_axis_tx_aresetn",
           "axi4stream_spi_master_0/aresetn",
-          "digilent_jstk2_0/aresetn",
-          "system_ila_0/resetn"
+          "system_ila_0/resetn",
+          "digilent_jstk2_0/aresetn"
         ]
       },
       "proc_sys_reset_0_peripheral_reset": {

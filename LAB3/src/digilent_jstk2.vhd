@@ -3,7 +3,7 @@ USE IEEE.STD_LOGIC_1164.ALL;
 
 ENTITY digilent_jstk2 IS
     GENERIC (
-        DELAY_US : INTEGER := 25; -- Delay (in us) between two packets
+        DELAY_US : INTEGER := 100; -- Delay (in us) between two packets
         CLKFREQ : INTEGER := 100_000_000; -- Frequency of the aclk signal (in Hz)
         SPI_SCLKFREQ : INTEGER := 5_000 -- Frequency of the SPI SCLK clock signal (in Hz)
     );
@@ -42,11 +42,11 @@ ARCHITECTURE Behavioral OF digilent_jstk2 IS
     -- Do not forget that you MUST wait a bit between two packets. See the JSTK2 datasheet (and the SPI IP-Core README).
     ------------------------------------------------------------
 
-    CONSTANT DELAY_CLK_CYCLES : INTEGER := DELAY_US * (CLKFREQ / 1_000_000) - 1;
+    CONSTANT DELAY_CLK_CYCLES : INTEGER := DELAY_US * (CLKFREQ / 1_000_000);
 
     -- State machine states
-    TYPE tx_state_type IS (DELAY, SEND_CMD, SEND_RED, SEND_GREEN, SEND_BLUE, SEND_DUMMY);
-    TYPE rx_state_type IS (IDLE, JSTK_X_LOW, JSTK_X_HIGH, JSTK_Y_LOW, JSTK_Y_HIGH, BUTTONS);
+    TYPE tx_state_type IS (DELAY, SEND_CMD, SEND_RED, SEND_GREEN, SEND_BLUE, SEND_DUMMY, WAIT_READY);
+    TYPE rx_state_type IS (JSTK_X_LOW, JSTK_X_HIGH, JSTK_Y_LOW, JSTK_Y_HIGH, BUTTONS);
 
     SIGNAL tx_state : tx_state_type := DELAY;
     SIGNAL rx_state : rx_state_type := JSTK_X_LOW;
@@ -54,7 +54,6 @@ ARCHITECTURE Behavioral OF digilent_jstk2 IS
     SIGNAL tx_delay_counter : INTEGER := 0;
 
     SIGNAL rx_cache : STD_LOGIC_VECTOR(7 DOWNTO 0);
-    SIGNAL rx_done : STD_LOGIC := '1'; -- Pronto a trasmettere al primo ciclo
 
 BEGIN
     -- The SPI IP-Core is a slave, so we must set the m_axis_tvalid signal to '1' when we want to send data to it.
@@ -74,46 +73,49 @@ BEGIN
             ELSE
 
                 CASE tx_state IS
+
                     WHEN DELAY =>
-                        m_axis_tdata <= (OTHERS => '0');
                         IF tx_delay_counter >= DELAY_CLK_CYCLES THEN
-                            IF rx_done = '1' THEN
-                                tx_delay_counter <= 0;
-                                tx_state <= SEND_CMD;
-                            END IF;
+                            tx_delay_counter <= 0;
+                            tx_state <= SEND_CMD;
                         ELSE
                             tx_delay_counter <= tx_delay_counter + 1;
                         END IF;
 
                     WHEN SEND_CMD =>
+                        tx_state <= SEND_RED;
                         m_axis_tdata <= CMDSETLEDRGB;
-                        IF m_axis_tready = '1' THEN
-                            tx_state <= SEND_RED;
-                        END IF;
 
                     WHEN SEND_RED =>
-                        m_axis_tdata <= led_r;
                         IF m_axis_tready = '1' THEN
+                            m_axis_tdata <= led_r;
                             tx_state <= SEND_GREEN;
                         END IF;
 
                     WHEN SEND_GREEN =>
-                        m_axis_tdata <= led_g;
                         IF m_axis_tready = '1' THEN
+                            m_axis_tdata <= led_g;
                             tx_state <= SEND_BLUE;
                         END IF;
 
                     WHEN SEND_BLUE =>
-                        m_axis_tdata <= led_b;
                         IF m_axis_tready = '1' THEN
+                            m_axis_tdata <= led_b;
                             tx_state <= SEND_DUMMY;
                         END IF;
 
                     WHEN SEND_DUMMY =>
-                        m_axis_tdata <= (OTHERS => '0');
                         IF m_axis_tready = '1' THEN
+                            m_axis_tdata <= "01101000"; -- Dummy byte
+                            tx_state <= WAIT_READY;
+                        END IF;
+
+                    WHEN WAIT_READY =>
+                        IF m_axis_tready = '1' THEN
+                            m_axis_tdata <= "01000101"; -- Dummy byte not readed
                             tx_state <= DELAY;
                         END IF;
+
                 END CASE;
             END IF;
         END IF;
@@ -126,18 +128,12 @@ BEGIN
 
             IF aresetn = '0' THEN
 
-                rx_state <= IDLE;
+                rx_state <= JSTK_X_LOW;
                 rx_cache <= (OTHERS => '0');
-                rx_done <= '1';
 
             ELSE
-                
+
                 CASE rx_state IS
-                    WHEN IDLE =>
-                        IF tx_state = SEND_CMD THEN
-                            rx_state <= JSTK_X_LOW;
-                            rx_done <= '0'; -- In attesa di ricevere la risposta
-                        END IF;
 
                     WHEN JSTK_X_LOW =>
                         IF s_axis_tvalid = '1' THEN
@@ -167,9 +163,9 @@ BEGIN
                         IF s_axis_tvalid = '1' THEN
                             btn_jstk <= s_axis_tdata(0);
                             btn_trigger <= s_axis_tdata(1);
-                            rx_state <= IDLE;
-                            rx_done <= '1'; -- Risposta completa ricevuta
+                            rx_state <= JSTK_X_LOW;
                         END IF;
+
                 END CASE;
             END IF;
         END IF;
