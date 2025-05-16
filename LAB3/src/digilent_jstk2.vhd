@@ -3,7 +3,7 @@ USE IEEE.STD_LOGIC_1164.ALL;
 
 ENTITY digilent_jstk2 IS
     GENERIC (
-        DELAY_US : INTEGER := 100; -- Delay (in us) between two packets
+        DELAY_US : INTEGER := 100; -- Delay (in us) between two packets - Required by the SPI IP-Core tested with 25us doesn't work
         CLKFREQ : INTEGER := 100_000_000; -- Frequency of the aclk signal (in Hz)
         SPI_SCLKFREQ : INTEGER := 5_000 -- Frequency of the SPI SCLK clock signal (in Hz)
     );
