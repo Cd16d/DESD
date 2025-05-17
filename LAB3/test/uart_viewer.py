@@ -40,18 +40,18 @@ def receive_graph_mode(ser):
             if ser.in_waiting >= CHUNK_SIZE:
                 data = ser.read(CHUNK_SIZE)
                 if len(data) >= 2:
-                    x = data[0]
-                    y = data[1]
+                    x = data[1]
+                    y = data[2]
                     q.put((x, y))
 
     reader_thread = threading.Thread(target=serial_reader, daemon=True)
     reader_thread.start()
 
-    latest_point = [0, 0]
+    latest_point = [64, 64]  # Punto iniziale al centro del grafico
     fig, ax = plt.subplots()
     sc = ax.scatter([latest_point[0]], [latest_point[1]])
-    ax.set_xlim(0, 255)
-    ax.set_ylim(0, 255)
+    ax.set_xlim(0, 127)
+    ax.set_ylim(0, 127)
     ax.set_xlabel("X")
     ax.set_ylabel("Y")
     ax.set_title("Coordinate in tempo reale")
