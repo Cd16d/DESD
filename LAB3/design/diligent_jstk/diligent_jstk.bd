@@ -591,29 +591,22 @@
       }
     },
     "interface_nets": {
-      "AXI4Stream_UART_0_M00_AXIS_RX": {
-        "interface_ports": [
-          "AXI4Stream_UART_0/M00_AXIS_RX",
-          "jstk_uart_bridge_0/s_axis"
-        ]
-      },
       "axi4stream_spi_master_0_SPI_M": {
         "interface_ports": [
           "SPI_M_0",
           "axi4stream_spi_master_0/SPI_M"
         ]
       },
+      "AXI4Stream_UART_0_M00_AXIS_RX": {
+        "interface_ports": [
+          "AXI4Stream_UART_0/M00_AXIS_RX",
+          "jstk_uart_bridge_0/s_axis"
+        ]
+      },
       "AXI4Stream_UART_0_UART": {
         "interface_ports": [
           "usb_uart",
           "AXI4Stream_UART_0/UART"
-        ]
-      },
-      "digilent_jstk2_0_m_axis": {
-        "interface_ports": [
-          "digilent_jstk2_0/m_axis",
-          "axi4stream_spi_master_0/S_AXIS",
-          "system_ila_0/SLOT_0_AXIS"
         ]
       },
       "jstk_uart_bridge_0_m_axis": {
@@ -627,6 +620,13 @@
           "axi4stream_spi_master_0/M_AXIS",
           "digilent_jstk2_0/s_axis",
           "system_ila_0/SLOT_1_AXIS"
+        ]
+      },
+      "digilent_jstk2_0_m_axis": {
+        "interface_ports": [
+          "digilent_jstk2_0/m_axis",
+          "axi4stream_spi_master_0/S_AXIS",
+          "system_ila_0/SLOT_0_AXIS"
         ]
       }
     },

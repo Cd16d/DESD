@@ -39,17 +39,21 @@ def receive_graph_mode(ser):
         while True:
             if ser.in_waiting >= CHUNK_SIZE:
                 data = ser.read(CHUNK_SIZE)
-                if len(data) >= 2:
+                if len(data) >= 4:
                     x = data[1]
                     y = data[2]
-                    q.put((x, y))
+                    flags = data[3]
+                    q.put((x, y, flags))
 
     reader_thread = threading.Thread(target=serial_reader, daemon=True)
     reader_thread.start()
 
     latest_point = [64, 64]  # Punto iniziale al centro del grafico
+    latest_color = 'blue'
+    latest_size = 100
+
     fig, ax = plt.subplots()
-    sc = ax.scatter([latest_point[0]], [latest_point[1]])
+    sc = ax.scatter([latest_point[0]], [latest_point[1]], c=[latest_color], s=[latest_size])
     ax.set_xlim(0, 127)
     ax.set_ylim(0, 127)
     ax.set_xlabel("X")
@@ -57,14 +61,27 @@ def receive_graph_mode(ser):
     ax.set_title("Coordinate in tempo reale")
 
     def update(frame):
+        nonlocal latest_point, latest_color, latest_size
         while not q.empty():
-            x, y = q.get()
+            x, y, flags = q.get()
             latest_point[0] = x
             latest_point[1] = y
+            # Bit 0: red if set, else blue
+            if flags & 0b00000001:
+                latest_color = 'red'
+            else:
+                latest_color = 'blue'
+            # Bit 1: bigger if set
+            if flags & 0b00000010:
+                latest_size = 300
+            else:
+                latest_size = 100
         sc.set_offsets([latest_point])
+        sc.set_color([latest_color])
+        sc.set_sizes([latest_size])
         return sc,
 
-    ani = animation.FuncAnimation(fig, update, interval=30, blit=True)
+    ani = animation.FuncAnimation(fig, update, interval=10, blit=True, cache_frame_data=False)
     plt.show()
 
 def send_mode(ser):

@@ -81,7 +81,6 @@ BEGIN
 			IF aresetn = '0' THEN
 
 				tx_state <= DELAY;
-				m_axis_tdata <= (OTHERS => '0');
 				tx_delay_counter <= 0;
 
 			ELSE
