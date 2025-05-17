@@ -52,6 +52,12 @@ ARCHITECTURE Behavioral OF LFO IS
 
 BEGIN
 
+    -- Output assignments
+    s_axis_tready <= s_axis_tready_i;
+    m_axis_tdata <= m_axis_tdata_i;
+    m_axis_tvalid <= m_axis_tvalid_i;
+    m_axis_tlast <= m_axis_tlast_i;
+
     PROCESS (aclk)
     BEGIN
         IF rising_edge(aclk) THEN
@@ -68,10 +74,13 @@ BEGIN
                 tri_counter <= (OTHERS => '0');
                 direction_up <= '1';
                 lfo_tick <= '0';
+
             ELSIF lfo_enable = '1' THEN
+
                 IF step_counter < lfo_period_int THEN
                     step_counter <= step_counter + 1;
                     lfo_tick <= '0';
+
                 ELSE
                     step_counter <= 0;
                     lfo_tick <= '1';
@@ -92,14 +101,19 @@ BEGIN
                         END IF;
                     END IF;
                 END IF;
+
             ELSE
                 lfo_tick <= '0';
                 direction_up <= '1';
                 tri_counter <= (OTHERS => '0');
                 step_counter <= 0;
+
             END IF;
+
         END IF;
+        
     END PROCESS;
+
     PROCESS (aclk)
     BEGIN
         IF rising_edge(aclk) THEN
@@ -145,10 +159,5 @@ BEGIN
             END IF;
         END IF;
     END PROCESS;
-
-    s_axis_tready <= s_axis_tready_i;
-    m_axis_tdata <= m_axis_tdata_i;
-    m_axis_tvalid <= m_axis_tvalid_i;
-    m_axis_tlast <= m_axis_tlast_i;
 
 END ARCHITECTURE Behavioral;
