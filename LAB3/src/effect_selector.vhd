@@ -1,24 +1,3 @@
-----------------------------------------------------------------------------------
--- Company: 
--- Engineer: 
--- 
--- Create Date: 04/29/2024 10:12:03 AM
--- Design Name: 
--- Module Name: effect_selector - Behavioral
--- Project Name: 
--- Target Devices: 
--- Tool Versions: 
--- Description: 
--- 
--- Dependencies: 
--- 
--- Revision:
--- Revision 0.01 - File Created
--- Additional Comments:
--- 
-----------------------------------------------------------------------------------
-
-
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 
@@ -38,6 +17,7 @@ entity effect_selector is
     Port (
         aclk : in STD_LOGIC;
         aresetn : in STD_LOGIC;
+        
         effect : in STD_LOGIC;
         jstck_x : in STD_LOGIC_VECTOR(JOYSTICK_LENGHT-1 downto 0);
         jstck_y : in STD_LOGIC_VECTOR(JOYSTICK_LENGHT-1 downto 0);

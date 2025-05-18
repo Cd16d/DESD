@@ -149,7 +149,7 @@ BEGIN
                             signed(s_axis_tdata) * tri_counter
                             );
                     ELSE
-                        lfo_product <= s_axis_tdata;
+                        lfo_product <= s_axis_tdata & (TRIANGULAR_COUNTER_LENGHT - 1 downto 0 => '0');
                     END IF;
 
                     trigger <= '1';
