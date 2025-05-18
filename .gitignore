@@ -43,6 +43,7 @@
 *.wdf
 *.lpr
 *.bxml
+*.zip
 
 
 # Vivado project directories
