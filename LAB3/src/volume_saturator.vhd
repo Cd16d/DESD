@@ -1,33 +1,81 @@
-library IEEE;
-use IEEE.STD_LOGIC_1164.ALL;
-use IEEE.NUMERIC_STD.ALL;
+LIBRARY IEEE;
+USE IEEE.STD_LOGIC_1164.ALL;
+USE IEEE.NUMERIC_STD.ALL;
 
-entity volume_saturator is
-	Generic (
-		TDATA_WIDTH		: positive := 24;
-		VOLUME_WIDTH	: positive := 10;
-		VOLUME_STEP_2	: positive := 6;		-- i.e., number_of_steps = 2**(VOLUME_STEP_2)
-		HIGHER_BOUND	: integer := 2**15-1;	-- Inclusive
-		LOWER_BOUND		: integer := -2**15		-- Inclusive
+ENTITY volume_saturator IS
+	GENERIC (
+		TDATA_WIDTH : POSITIVE := 24;
+		VOLUME_WIDTH : POSITIVE := 10;
+		VOLUME_STEP_2 : POSITIVE := 6; -- i.e., number_of_steps = 2**(VOLUME_STEP_2)
+		HIGHER_BOUND : INTEGER := 2 ** 15 - 1; -- Inclusive
+		LOWER_BOUND : INTEGER := - 2 ** 15 -- Inclusive
 	);
-	Port (
-		aclk			: in std_logic;
-		aresetn			: in std_logic;
+	PORT (
+		aclk : IN STD_LOGIC;
+		aresetn : IN STD_LOGIC;
 
-		s_axis_tvalid	: in std_logic;
-		s_axis_tdata	: in std_logic_vector(TDATA_WIDTH-1 + 2**(VOLUME_WIDTH-VOLUME_STEP_2-1) downto 0);
-		s_axis_tlast	: in std_logic;
-		s_axis_tready	: out std_logic;
+		s_axis_tvalid : IN STD_LOGIC;
+		s_axis_tdata : IN STD_LOGIC_VECTOR(TDATA_WIDTH - 1 + 2 ** (VOLUME_WIDTH - VOLUME_STEP_2 - 1) DOWNTO 0);
+		s_axis_tlast : IN STD_LOGIC;
+		s_axis_tready : OUT STD_LOGIC;
 
-		m_axis_tvalid	: out std_logic;
-		m_axis_tdata	: out std_logic_vector(TDATA_WIDTH-1 downto 0);
-		m_axis_tlast	: out std_logic;
-		m_axis_tready	: in std_logic
+		m_axis_tvalid : OUT STD_LOGIC;
+		m_axis_tdata : OUT STD_LOGIC_VECTOR(TDATA_WIDTH - 1 DOWNTO 0);
+		m_axis_tlast : OUT STD_LOGIC;
+		m_axis_tready : IN STD_LOGIC
 	);
-end volume_saturator;
+END volume_saturator;
 
-architecture Behavioral of volume_saturator is
+ARCHITECTURE Behavioral OF volume_saturator IS
 
-begin
+	SIGNAL s_axis_tready_int : STD_LOGIC;
+	SIGNAL m_axis_tvalid_int : STD_LOGIC;
 
-end Behavioral;
+BEGIN
+	-- Output assignments
+	s_axis_tready <= s_axis_tready_int;
+	m_axis_tvalid <= m_axis_tvalid_int;
+
+	PROCESS (aclk)
+	BEGIN
+
+		IF rising_edge(aclk) THEN
+
+			IF aresetn = '0' THEN
+				s_axis_tready_int <= '0';
+				m_axis_tvalid_int <= '0';
+				m_axis_tlast <= '0';
+				m_axis_tdata <= (OTHERS => '0');
+
+			ELSE
+				-- Clear valid flag when master interface is ready
+				IF m_axis_tready = '1' THEN
+					m_axis_tvalid_int <= '0';
+				END IF;
+
+				IF s_axis_tvalid = '1' AND (m_axis_tvalid_int = '0' OR m_axis_tready = '1') THEN
+					-- Check if the input data is within the bounds else saturate
+					IF signed(s_axis_tdata) > to_signed(HIGHER_BOUND, s_axis_tdata'length) THEN
+						m_axis_tdata <= STD_LOGIC_VECTOR(to_signed(HIGHER_BOUND, TDATA_WIDTH));
+					ELSIF signed(s_axis_tdata) < to_signed(LOWER_BOUND, s_axis_tdata'length) THEN
+						m_axis_tdata <= STD_LOGIC_VECTOR(to_signed(LOWER_BOUND, TDATA_WIDTH));
+					ELSE
+						m_axis_tdata <= STD_LOGIC_VECTOR(resize(signed(s_axis_tdata), TDATA_WIDTH));
+					END IF;
+
+					s_axis_tready_int <= '1';
+					m_axis_tvalid_int <= '1';
+					m_axis_tlast <= s_axis_tlast;
+
+				ELSE
+					s_axis_tready_int <= '0';
+
+				END IF;
+
+			END IF;
+
+		END IF;
+
+	END PROCESS;
+
+END Behavioral;

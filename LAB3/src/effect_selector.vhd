@@ -1,34 +1,55 @@
-library IEEE;
-use IEEE.STD_LOGIC_1164.ALL;
+LIBRARY IEEE;
+USE IEEE.STD_LOGIC_1164.ALL;
 
--- Uncomment the following library declaration if using
--- arithmetic functions with Signed or Unsigned values
---use IEEE.NUMERIC_STD.ALL;
-
--- Uncomment the following library declaration if instantiating
--- any Xilinx leaf cells in this code.
---library UNISIM;
---use UNISIM.VComponents.all;
-
-entity effect_selector is
-    generic(
-        JOYSTICK_LENGHT  : integer := 10
+ENTITY effect_selector IS
+    GENERIC (
+        JOYSTICK_LENGHT : INTEGER := 10
     );
-    Port (
-        aclk : in STD_LOGIC;
-        aresetn : in STD_LOGIC;
-        
-        effect : in STD_LOGIC;
-        jstck_x : in STD_LOGIC_VECTOR(JOYSTICK_LENGHT-1 downto 0);
-        jstck_y : in STD_LOGIC_VECTOR(JOYSTICK_LENGHT-1 downto 0);
-        volume : out STD_LOGIC_VECTOR(JOYSTICK_LENGHT-1 downto 0);
-        balance : out STD_LOGIC_VECTOR(JOYSTICK_LENGHT-1 downto 0);
-        lfo_period : out STD_LOGIC_VECTOR(JOYSTICK_LENGHT-1 downto 0)
+    PORT (
+        aclk : IN STD_LOGIC;
+        aresetn : IN STD_LOGIC;
+
+        effect : IN STD_LOGIC;
+        jstck_x : IN STD_LOGIC_VECTOR(JOYSTICK_LENGHT - 1 DOWNTO 0);
+        jstck_y : IN STD_LOGIC_VECTOR(JOYSTICK_LENGHT - 1 DOWNTO 0);
+        volume : OUT STD_LOGIC_VECTOR(JOYSTICK_LENGHT - 1 DOWNTO 0);
+        balance : OUT STD_LOGIC_VECTOR(JOYSTICK_LENGHT - 1 DOWNTO 0);
+        lfo_period : OUT STD_LOGIC_VECTOR(JOYSTICK_LENGHT - 1 DOWNTO 0)
     );
-end effect_selector;
+END effect_selector;
 
-architecture Behavioral of effect_selector is
+ARCHITECTURE Behavioral OF effect_selector IS
 
-begin
+BEGIN
 
-end Behavioral;
+    PROCESS (aclk)
+    BEGIN
+
+        IF rising_edge(aclk) THEN
+
+            IF aresetn = '0' THEN
+                volume <= (OTHERS => '0');
+                balance <= (OTHERS => '0');
+                lfo_period <= (OTHERS => '0');
+
+            ELSE
+                balance <= jstck_x;
+
+                IF effect = '0' THEN
+                    -- volume/balance control
+                    volume <= jstck_y;
+                    lfo_period <= (OTHERS => '0');
+
+                ELSE
+                    -- LFO control
+                    lfo_period <= jstck_y;
+                    
+                END IF;
+
+            END IF;
+
+        END IF;
+
+    END PROCESS;
+
+END Behavioral;
