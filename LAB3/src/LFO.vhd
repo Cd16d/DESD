@@ -38,15 +38,12 @@ ARCHITECTURE Behavioral OF LFO IS
     CONSTANT LFO_COUNTER_BASE_PERIOD_US : INTEGER := 1000; -- 1ms
     CONSTANT ADJUSTMENT_FACTOR : INTEGER := 90;
     CONSTANT JSTK_CENTER_VALUE : INTEGER := 2 ** (JOYSTICK_LENGHT - 1);
-    constant LFO_COUNTER_BASE_CLK_CYCLES : INTEGER := LFO_COUNTER_BASE_PERIOD_US * 1000 / CLK_PERIOD_NS;
-    
+    CONSTANT LFO_COUNTER_BASE_CLK_CYCLES : INTEGER := LFO_COUNTER_BASE_PERIOD_US * 1000 / CLK_PERIOD_NS;
+
     SIGNAL step_clk_cycles : INTEGER := LFO_COUNTER_BASE_CLK_CYCLES;
-    SIGNAL step_counter : INTEGER := 1;
+    SIGNAL step_counter : INTEGER RANGE 0 TO 2 ** TRIANGULAR_COUNTER_LENGHT - 1 := 0;
     SIGNAL tri_counter : signed(TRIANGULAR_COUNTER_LENGHT - 1 DOWNTO 0) := (OTHERS => '0');
     SIGNAL direction_up : STD_LOGIC := '1';
-    SIGNAL lfo_product : STD_LOGIC_VECTOR(CHANNEL_LENGHT + TRIANGULAR_COUNTER_LENGHT - 1 DOWNTO 0) := (OTHERS => '0');
-
-    SIGNAL trigger : STD_LOGIC := '0';
 
     SIGNAL s_axis_tready_int : STD_LOGIC := '0';
     SIGNAL m_axis_tvalid_int : STD_LOGIC := '0';
@@ -56,14 +53,6 @@ BEGIN
     -- Output assignments
     s_axis_tready <= s_axis_tready_int;
     m_axis_tvalid <= m_axis_tvalid_int;
-
-    -- LFO period adjustment process
-    PROCESS (aclk)
-    BEGIN
-        IF rising_edge(aclk) THEN
-            step_clk_cycles <= LFO_COUNTER_BASE_CLK_CYCLES - ADJUSTMENT_FACTOR * to_integer(JSTK_CENTER_VALUE - unsigned(lfo_period));
-        END IF;
-    END PROCESS;
 
     -- Optimized single process for LFO step and triangular waveform generation
     PROCESS (aclk)
@@ -76,33 +65,36 @@ BEGIN
                 direction_up <= '1';
 
             ELSE
+                -- Clamp step_clk_cycles to a minimum of 1 to avoid negative or zero values
+                IF (LFO_COUNTER_BASE_CLK_CYCLES - ADJUSTMENT_FACTOR * to_integer(JSTK_CENTER_VALUE - unsigned(lfo_period))) < 1 THEN
+                    step_clk_cycles <= 1;
+                ELSE
+                    step_clk_cycles <= LFO_COUNTER_BASE_CLK_CYCLES - ADJUSTMENT_FACTOR * to_integer(JSTK_CENTER_VALUE - unsigned(lfo_period));
+                END IF;
 
                 IF lfo_enable = '1' THEN
 
-                    IF step_counter < step_clk_cycles THEN
-                        step_counter <= step_counter + 1;
-
-                    ELSE
+                    IF step_counter >= step_clk_cycles THEN
                         step_counter <= 0;
 
-                        IF direction_up = '1' THEN
+                        IF tri_counter = 2 ** TRIANGULAR_COUNTER_LENGHT - 2 THEN
+                            direction_up <= '0';
 
-                            IF tri_counter = 2 ** TRIANGULAR_COUNTER_LENGHT - 1 THEN
-                                direction_up <= '0';
-                                tri_counter <= tri_counter - 1;
-                            ELSE
-                                tri_counter <= tri_counter + 1;
-                            END IF;
-
-                        ELSE
-                            IF tri_counter = 0 THEN
-                                direction_up <= '1';
-                                tri_counter <= tri_counter + 1;
-                            ELSE
-                                tri_counter <= tri_counter - 1;
-                            END IF;
+                        ELSIF tri_counter = 1 THEN
+                            direction_up <= '1';
 
                         END IF;
+
+                        IF direction_up = '1' THEN
+                            tri_counter <= tri_counter + 1;
+
+                        ELSE
+                            tri_counter <= tri_counter - 1;
+
+                        END IF;
+
+                    ELSE
+                        step_counter <= step_counter + 1;
 
                     END IF;
 
@@ -126,33 +118,31 @@ BEGIN
                 m_axis_tlast <= '0';
 
             ELSE
-                -- Set the ready signal for the slave interface
-                s_axis_tready_int <= m_axis_tready OR NOT m_axis_tvalid_int;
-
                 -- Clear valid flag when master interface is ready
                 IF m_axis_tready = '1' THEN
                     m_axis_tvalid_int <= '0';
                 END IF;
 
-                IF trigger = '1' AND (m_axis_tvalid_int = '0' OR m_axis_tready = '1') THEN
+                IF s_axis_tvalid = '1' AND (m_axis_tvalid_int = '0' OR m_axis_tready = '1') THEN
+                    IF lfo_enable = '1' THEN
+                        m_axis_tdata <= STD_LOGIC_VECTOR(
+                            resize(
+                                signed(s_axis_tdata) * tri_counter,
+                                m_axis_tdata'LENGTH
+                            )
+                        );
+
+                    ELSE
+                        m_axis_tdata <= s_axis_tdata;
+
+                    END IF;
+                    s_axis_tready_int <= '1';
                     m_axis_tvalid_int <= '1';
                     m_axis_tlast <= s_axis_tlast;
-                    m_axis_tdata <= lfo_product(CHANNEL_LENGHT + TRIANGULAR_COUNTER_LENGHT - 1 DOWNTO TRIANGULAR_COUNTER_LENGHT);
 
-                    trigger <= '0';
-                END IF;
+                ELSE
+                    s_axis_tready_int <= '0';
 
-                -- Handle input data
-                IF s_axis_tvalid = '1' AND s_axis_tready_int = '1' THEN
-                    IF lfo_enable = '1' THEN
-                        lfo_product <= STD_LOGIC_VECTOR(
-                            signed(s_axis_tdata) * tri_counter
-                            );
-                    ELSE
-                        lfo_product <= s_axis_tdata & (TRIANGULAR_COUNTER_LENGHT - 1 downto 0 => '0');
-                    END IF;
-
-                    trigger <= '1';
                 END IF;
 
             END IF;

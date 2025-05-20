@@ -6,7 +6,8 @@
       "name": "lab_3",
       "rev_ctrl_bd_flag": "RevCtrlBdOff",
       "synth_flow_mode": "None",
-      "tool_version": "2020.2"
+      "tool_version": "2020.2",
+      "validated": "true"
     },
     "design_tree": {
       "clk_wiz_0": "",
@@ -39,8 +40,20 @@
         "type": "clk",
         "direction": "I",
         "parameters": {
+          "CLK_DOMAIN": {
+            "value": "lab_3_sys_clock",
+            "value_src": "default"
+          },
           "FREQ_HZ": {
             "value": "100000000"
+          },
+          "FREQ_TOLERANCE_HZ": {
+            "value": "0",
+            "value_src": "default"
+          },
+          "INSERT_VIP": {
+            "value": "0",
+            "value_src": "default"
           },
           "PHASE": {
             "value": "0.000"
@@ -51,6 +64,10 @@
         "type": "rst",
         "direction": "I",
         "parameters": {
+          "INSERT_VIP": {
+            "value": "0",
+            "value_src": "default"
+          },
           "POLARITY": {
             "value": "ACTIVE_HIGH"
           }
@@ -1419,6 +1436,18 @@
               "HAS_TLAST": {
                 "value": "0",
                 "value_src": "constant"
+              },
+              "FREQ_HZ": {
+                "value": "100000000",
+                "value_src": "ip_prop"
+              },
+              "PHASE": {
+                "value": "0.0",
+                "value_src": "ip_prop"
+              },
+              "CLK_DOMAIN": {
+                "value": "/clk_wiz_0_clk_out1",
+                "value_src": "ip_prop"
               }
             },
             "port_maps": {
@@ -1473,6 +1502,18 @@
               "HAS_TLAST": {
                 "value": "0",
                 "value_src": "constant"
+              },
+              "FREQ_HZ": {
+                "value": "100000000",
+                "value_src": "ip_prop"
+              },
+              "PHASE": {
+                "value": "0.0",
+                "value_src": "ip_prop"
+              },
+              "CLK_DOMAIN": {
+                "value": "/clk_wiz_0_clk_out1",
+                "value_src": "ip_prop"
               }
             },
             "port_maps": {
@@ -1501,6 +1542,18 @@
               "ASSOCIATED_RESET": {
                 "value": "aresetn",
                 "value_src": "constant"
+              },
+              "FREQ_HZ": {
+                "value": "100000000",
+                "value_src": "ip_prop"
+              },
+              "PHASE": {
+                "value": "0.0",
+                "value_src": "ip_prop"
+              },
+              "CLK_DOMAIN": {
+                "value": "/clk_wiz_0_clk_out1",
+                "value_src": "ip_prop"
               }
             }
           },
@@ -1598,6 +1651,18 @@
               "HAS_TLAST": {
                 "value": "1",
                 "value_src": "constant"
+              },
+              "FREQ_HZ": {
+                "value": "100000000",
+                "value_src": "ip_prop"
+              },
+              "PHASE": {
+                "value": "0.0",
+                "value_src": "ip_prop"
+              },
+              "CLK_DOMAIN": {
+                "value": "/clk_wiz_0_clk_out1",
+                "value_src": "ip_prop"
               }
             },
             "port_maps": {
@@ -1656,6 +1721,18 @@
               "HAS_TLAST": {
                 "value": "1",
                 "value_src": "constant"
+              },
+              "FREQ_HZ": {
+                "value": "100000000",
+                "value_src": "ip_prop"
+              },
+              "PHASE": {
+                "value": "0.0",
+                "value_src": "ip_prop"
+              },
+              "CLK_DOMAIN": {
+                "value": "/clk_wiz_0_clk_out1",
+                "value_src": "ip_prop"
               }
             },
             "port_maps": {
@@ -1692,6 +1769,18 @@
               "ASSOCIATED_RESET": {
                 "value": "aresetn",
                 "value_src": "constant"
+              },
+              "FREQ_HZ": {
+                "value": "100000000",
+                "value_src": "ip_prop"
+              },
+              "PHASE": {
+                "value": "0.0",
+                "value_src": "ip_prop"
+              },
+              "CLK_DOMAIN": {
+                "value": "/clk_wiz_0_clk_out1",
+                "value_src": "ip_prop"
               }
             }
           },
@@ -1729,10 +1818,10 @@
           "axi4stream_spi_master_0/S_AXIS"
         ]
       },
-      "axi4stream_spi_master_0_SPI_M": {
+      "moving_average_filte_0_m_axis": {
         "interface_ports": [
-          "SPI_M_0",
-          "axi4stream_spi_master_0/SPI_M"
+          "balance_controller_0/s_axis",
+          "moving_average_filte_0/m_axis"
         ]
       },
       "axis_broadcaster_0_M01_AXIS": {
@@ -1741,10 +1830,10 @@
           "led_level_controller_0/s_axis"
         ]
       },
-      "LFO_0_m_axis": {
+      "balance_controller_0_m_axis": {
         "interface_ports": [
-          "LFO_0/m_axis",
-          "mute_controller_0/s_axis"
+          "balance_controller_0/m_axis",
+          "volume_controller_0/s_axis"
         ]
       },
       "volume_controller_0_m_axis": {
@@ -1759,22 +1848,22 @@
           "axis_dual_i2s_0/s_axis"
         ]
       },
-      "balance_controller_0_m_axis": {
+      "LFO_0_m_axis": {
         "interface_ports": [
-          "balance_controller_0/m_axis",
-          "volume_controller_0/s_axis"
+          "LFO_0/m_axis",
+          "mute_controller_0/s_axis"
+        ]
+      },
+      "axi4stream_spi_master_0_SPI_M": {
+        "interface_ports": [
+          "SPI_M_0",
+          "axi4stream_spi_master_0/SPI_M"
         ]
       },
       "axis_dual_i2s_0_m_axis": {
         "interface_ports": [
           "axis_dual_i2s_0/m_axis",
           "moving_average_filte_0/s_axis"
-        ]
-      },
-      "moving_average_filte_0_m_axis": {
-        "interface_ports": [
-          "balance_controller_0/s_axis",
-          "moving_average_filte_0/m_axis"
         ]
       },
       "mute_controller_0_m_axis": {

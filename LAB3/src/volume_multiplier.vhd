@@ -28,21 +28,18 @@ END volume_multiplier;
 
 ARCHITECTURE Behavioral OF volume_multiplier IS
 
-	CONSTANT VOLUME_STEPS : INTEGER := (2 ** VOLUME_WIDTH) / (2 ** (VOLUME_STEP_2 + 1));
+	CONSTANT VOLUME_STEPS : INTEGER := (2 ** VOLUME_WIDTH) / (2 ** VOLUME_STEP_2);
+	CONSTANT CENTER_VOLUME_STEP : INTEGER := (2 ** (VOLUME_WIDTH - 1) - 1) / (2 ** VOLUME_STEP_2) + 1;
 
 	SIGNAL volume_exp_mult : INTEGER RANGE -VOLUME_STEPS TO VOLUME_STEPS := 0;
-	signal volume_centered : SIGNED(VOLUME_WIDTH - 1 DOWNTO 0);
 
-	SIGNAL s_axis_tready_int : STD_LOGIC;
+
 	SIGNAL m_axis_tvalid_int : STD_LOGIC;
 
 BEGIN
 	-- Assigning the output signals
-	s_axis_tready <= s_axis_tready_int;
 	m_axis_tvalid <= m_axis_tvalid_int;
-
-	-- Volume to signed and centered
-	volume_centered <= signed(unsigned(volume) - to_unsigned(511, VOLUME_WIDTH));
+	s_axis_tready <= m_axis_tready AND aresetn;
 
 	-- Volume to exp
 	PROCESS (aclk)
@@ -54,7 +51,10 @@ BEGIN
 				volume_exp_mult <= 0;
 
 			ELSE
-				volume_exp_mult <= to_integer(volume_centered(VOLUME_WIDTH - 1 DOWNTO VOLUME_STEP_2));
+				-- Volume to signed and centered and convert to power of 2 exponent
+				volume_exp_mult <= to_integer(
+					shift_right(signed('0' & volume), VOLUME_STEP_2) - CENTER_VOLUME_STEP
+				);
 
 			END IF;
 
@@ -69,9 +69,9 @@ BEGIN
 		IF rising_edge(aclk) THEN
 
 			IF aresetn = '0' THEN
-				s_axis_tready_int <= '0';
 				m_axis_tvalid_int <= '0';
 				m_axis_tlast <= '0';
+				m_axis_tdata <= (OTHERS => '0');
 
 			ELSE
 				-- Clear valid flag when master interface is ready
@@ -79,7 +79,9 @@ BEGIN
 					m_axis_tvalid_int <= '0';
 				END IF;
 
-				IF s_axis_tvalid = '1' AND (m_axis_tvalid_int = '0' OR m_axis_tready = '1') THEN
+				-- Handle the data flow
+				IF s_axis_tvalid = '1' AND m_axis_tready = '1' THEN
+					-- Multiply the input data with the volume and assign to output
 					IF volume_exp_mult >= 0 THEN
 						m_axis_tdata <= STD_LOGIC_VECTOR(
 							shift_left(
@@ -90,6 +92,7 @@ BEGIN
 								volume_exp_mult
 							)
 						);
+
 					ELSE
 						m_axis_tdata <= STD_LOGIC_VECTOR(
 							shift_right(
@@ -97,16 +100,15 @@ BEGIN
 									signed(s_axis_tdata),
 									m_axis_tdata'LENGTH
 								),
-								-volume_exp_mult
+								- volume_exp_mult
 							)
 						);
+
 					END IF;
-					s_axis_tready_int <= '1';
+
 					m_axis_tvalid_int <= '1';
 					m_axis_tlast <= s_axis_tlast;
 
-				ELSE
-					s_axis_tready_int <= '0';
 				END IF;
 
 			END IF;
