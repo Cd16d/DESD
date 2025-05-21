@@ -28,11 +28,9 @@ END volume_multiplier;
 
 ARCHITECTURE Behavioral OF volume_multiplier IS
 
-	CONSTANT VOLUME_STEPS : INTEGER := (2 ** VOLUME_WIDTH) / (2 ** VOLUME_STEP_2);
-	CONSTANT CENTER_VOLUME_STEP : INTEGER := (2 ** (VOLUME_WIDTH - 1) - 1) / (2 ** VOLUME_STEP_2) + 1;
+	CONSTANT VOLUME_STEPS : INTEGER := (2 ** (VOLUME_WIDTH - 1)) / (2 ** VOLUME_STEP_2) + 1;
 
 	SIGNAL volume_exp_mult : INTEGER RANGE -VOLUME_STEPS TO VOLUME_STEPS := 0;
-
 
 	SIGNAL m_axis_tvalid_int : STD_LOGIC;
 
@@ -53,7 +51,7 @@ BEGIN
 			ELSE
 				-- Volume to signed and centered and convert to power of 2 exponent
 				volume_exp_mult <= to_integer(
-					shift_right(signed('0' & volume), VOLUME_STEP_2) - CENTER_VOLUME_STEP
+					shift_right(signed('0' & volume) - to_signed(480, volume'length + 1), VOLUME_STEP_2)
 				);
 
 			END IF;
@@ -74,6 +72,9 @@ BEGIN
 				m_axis_tdata <= (OTHERS => '0');
 
 			ELSE
+				-- Default output signals
+				m_axis_tlast <= '0';
+
 				-- Clear valid flag when master interface is ready
 				IF m_axis_tready = '1' THEN
 					m_axis_tvalid_int <= '0';

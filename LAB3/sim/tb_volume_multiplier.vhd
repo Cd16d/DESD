@@ -14,6 +14,7 @@ ARCHITECTURE Behavioral OF tb_volume_multiplier IS
     CONSTANT VOLUME_WIDTH  : POSITIVE := 10;
     CONSTANT VOLUME_STEP_2 : POSITIVE := 6;
     CONSTANT N_SAMPLES     : INTEGER  := 8;
+    CONSTANT N_VOLUMES    : INTEGER  := 10;
 
     -- Output width calculation (as in DUT)
     CONSTANT TDATA_OUT_WIDTH : INTEGER := TDATA_WIDTH - 1 + 2 ** (VOLUME_WIDTH - VOLUME_STEP_2 - 1) + 1;
@@ -63,6 +64,21 @@ ARCHITECTURE Behavioral OF tb_volume_multiplier IS
         x"000A00", -- +2560
         x"FFF600"  -- -2560
     );
+    
+    -- Vettore di memoria per i valori di volume
+    TYPE volume_mem_type IS ARRAY(0 TO N_VOLUMES-1) OF STD_LOGIC_VECTOR(VOLUME_WIDTH-1 DOWNTO 0);
+    SIGNAL volume_mem : volume_mem_type := (
+        std_logic_vector(to_unsigned(0, VOLUME_WIDTH)),   -- 0.25x (forte attenuazione)
+        std_logic_vector(to_unsigned(64, VOLUME_WIDTH)),   -- 0.375x (attenuazione media)
+        std_logic_vector(to_unsigned(479, VOLUME_WIDTH)),   -- 0.4375x (leggera attenuazione)
+        std_logic_vector(to_unsigned(480, VOLUME_WIDTH)),   -- 0.5x (volume neutro)
+        std_logic_vector(to_unsigned(513, VOLUME_WIDTH)),   -- Circa 0.5x (volume neutro)
+        std_logic_vector(to_unsigned(576, VOLUME_WIDTH)),   -- 0.5625x (leggero aumento)
+        std_logic_vector(to_unsigned(640, VOLUME_WIDTH)),   -- 0.625x (aumento medio)
+        std_logic_vector(to_unsigned(768, VOLUME_WIDTH)),   -- 0.75x (aumento forte)
+        std_logic_vector(to_unsigned(896, VOLUME_WIDTH)),   -- 0.875x (aumento molto forte)
+        std_logic_vector(to_unsigned(1023, VOLUME_WIDTH))   -- 1x (massimo volume)
+    );
 
 BEGIN
 
@@ -99,7 +115,7 @@ BEGIN
         WAIT UNTIL rising_edge(aclk);
 
         -- Set volume to mid (no gain/loss)
-        volume <= std_logic_vector(to_unsigned(511, VOLUME_WIDTH));
+        volume <= volume_mem(0);
         WAIT UNTIL rising_edge(aclk);
 
         -- Send all samples
@@ -122,7 +138,7 @@ BEGIN
 
         -- Change volume (attenuate)
         WAIT FOR 20 ns;
-        volume <= std_logic_vector(to_unsigned(256, VOLUME_WIDTH)); -- attenuate
+        volume <= volume_mem(1);
 
         -- Send one more sample
         WAIT UNTIL rising_edge(aclk);
@@ -135,6 +151,12 @@ BEGIN
         END LOOP;
         s_axis_tvalid <= '0';
         s_axis_tlast  <= '0';
+
+        FOR i IN 2 TO N_VOLUMES-1 LOOP
+            WAIT FOR 20 ns;
+            volume <= volume_mem(i);
+            WAIT UNTIL rising_edge(aclk);
+            END LOOP;
 
         -- Wait and finish
         WAIT FOR 100 ns;
