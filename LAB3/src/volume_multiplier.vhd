@@ -29,6 +29,8 @@ END volume_multiplier;
 ARCHITECTURE Behavioral OF volume_multiplier IS
 
 	CONSTANT VOLUME_STEPS : INTEGER := (2 ** (VOLUME_WIDTH - 1)) / (2 ** VOLUME_STEP_2) + 1;
+	CONSTANT VOL_MID : INTEGER := 2 ** (VOLUME_WIDTH - 1); -- 512 for 10 bit
+	CONSTANT DEAD_ZONE : INTEGER := (2 ** VOLUME_STEP_2) / 2;
 
 	SIGNAL volume_exp_mult : INTEGER RANGE -VOLUME_STEPS TO VOLUME_STEPS := 0;
 
@@ -37,9 +39,9 @@ ARCHITECTURE Behavioral OF volume_multiplier IS
 BEGIN
 	-- Assigning the output signals
 	m_axis_tvalid <= m_axis_tvalid_int;
-	s_axis_tready <= m_axis_tready AND aresetn;
+	s_axis_tready <= (m_axis_tready OR NOT m_axis_tvalid_int) AND aresetn;
 
-	-- Volume to exp
+	-- Volume to exp process to avoid changing the volume value when multiplying it for the sample data
 	PROCESS (aclk)
 	BEGIN
 
@@ -51,7 +53,10 @@ BEGIN
 			ELSE
 				-- Volume to signed and centered and convert to power of 2 exponent
 				volume_exp_mult <= to_integer(
-					shift_right(signed('0' & volume) - to_signed(480, volume'length + 1), VOLUME_STEP_2)
+					shift_right(
+						signed('0' & volume) - to_signed(VOL_MID - DEAD_ZONE, volume'length + 1),
+						VOLUME_STEP_2
+					)
 				);
 
 			END IF;
@@ -69,7 +74,6 @@ BEGIN
 			IF aresetn = '0' THEN
 				m_axis_tvalid_int <= '0';
 				m_axis_tlast <= '0';
-				m_axis_tdata <= (OTHERS => '0');
 
 			ELSE
 				-- Default output signals
@@ -86,26 +90,10 @@ BEGIN
 					-- Joystick datasheet: 	(y-axis) a value of 0 when it is tilted all the way down 
 					-- 						and a value of 1023 when it is tilted all the way up
 					IF volume_exp_mult >= 0 THEN
-						m_axis_tdata <= STD_LOGIC_VECTOR(
-							shift_left(
-								resize(
-									signed(s_axis_tdata),
-									m_axis_tdata'LENGTH
-								),
-								volume_exp_mult
-							)
-						);
+						m_axis_tdata <= STD_LOGIC_VECTOR(resize(shift_left(signed(s_axis_tdata), volume_exp_mult), m_axis_tdata'LENGTH));
 
 					ELSE
-						m_axis_tdata <= STD_LOGIC_VECTOR(
-							shift_right(
-								resize(
-									signed(s_axis_tdata),
-									m_axis_tdata'LENGTH
-								),
-								- volume_exp_mult
-							)
-						);
+						m_axis_tdata <= STD_LOGIC_VECTOR(resize(shift_right(signed(s_axis_tdata), - volume_exp_mult), m_axis_tdata'LENGTH));
 
 					END IF;
 

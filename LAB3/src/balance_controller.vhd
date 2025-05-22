@@ -30,8 +30,7 @@ ARCHITECTURE Behavioral OF balance_controller IS
 
 	CONSTANT BALANCE_STEPS : INTEGER := (2 ** (BALANCE_WIDTH - 1)) / (2 ** BALANCE_STEP_2) + 1;
 	CONSTANT BAL_MID : INTEGER := 2 ** (BALANCE_WIDTH - 1); -- 512 for 10 bit
-	CONSTANT BLOCK_SIZE : INTEGER := 2 ** BALANCE_STEP_2;
-	CONSTANT DEAD_ZONE : INTEGER := BLOCK_SIZE / 2;
+	CONSTANT DEAD_ZONE : INTEGER := (2 ** BALANCE_STEP_2) / 2;
 
 	SIGNAL left_channel : INTEGER RANGE 0 TO BALANCE_STEPS := 0;
 	SIGNAL right_channel : INTEGER RANGE 0 TO BALANCE_STEPS := 0;
@@ -41,10 +40,12 @@ ARCHITECTURE Behavioral OF balance_controller IS
 BEGIN
 	-- Assigning the output signals
 	m_axis_tvalid <= m_axis_tvalid_int;
-	s_axis_tready <= m_axis_tready AND aresetn;
+	s_axis_tready <= (m_axis_tready OR NOT m_axis_tvalid_int) AND aresetn; -- Chiedere e in caso togliere 'AND aresetn'
 
-	-- Balance to exp
-	PROCESS (aclk)
+
+
+	-- Balance to exp process to avoid changing the balance value when multiplying it for the sample data
+	BALANCE_CALC : PROCESS (aclk)
 	BEGIN
 
 		IF rising_edge(aclk) THEN
@@ -56,13 +57,13 @@ BEGIN
 			ELSE
 				-- Balance left and right channels
 				IF unsigned(balance) > (BAL_MID + DEAD_ZONE) THEN
-					left_channel <= to_integer((unsigned(balance) - (BAL_MID + DEAD_ZONE)) SRL BALANCE_STEP_2) + 1;
+					left_channel <= to_integer((unsigned(balance) - to_unsigned(BAL_MID + DEAD_ZONE, balance'length)) SRL BALANCE_STEP_2) + 1; -- +1 due to shift approximation defect
 				ELSE
 					left_channel <= 0;
 				END IF;
 
 				IF unsigned(balance) < (BAL_MID - DEAD_ZONE) THEN
-					right_channel <= to_integer(((BAL_MID - DEAD_ZONE) - unsigned(balance)) SRL BALANCE_STEP_2) + 1;
+					right_channel <= to_integer((to_unsigned(BAL_MID - DEAD_ZONE, balance'length) - unsigned(balance)) SRL BALANCE_STEP_2) + 1;
 				ELSE
 					right_channel <= 0;
 				END IF;
@@ -71,10 +72,10 @@ BEGIN
 
 		END IF;
 
-	END PROCESS;
+	END PROCESS BALANCE_CALC;
 
 	-- Handle AXIS stream
-	PROCESS (aclk)
+	AXIS : PROCESS (aclk)
 	BEGIN
 
 		IF rising_edge(aclk) THEN
@@ -82,7 +83,6 @@ BEGIN
 			IF aresetn = '0' THEN
 				m_axis_tvalid_int <= '0';
 				m_axis_tlast <= '0';
-				m_axis_tdata <= (OTHERS => '0');
 
 			ELSE
 				-- Default output signals
@@ -113,6 +113,6 @@ BEGIN
 
 		END IF;
 
-	END PROCESS;
+	END PROCESS AXIS;
 
 END Behavioral;
