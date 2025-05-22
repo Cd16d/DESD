@@ -6,7 +6,7 @@ ENTITY balance_controller IS
 	GENERIC (
 		TDATA_WIDTH : POSITIVE := 24;
 		BALANCE_WIDTH : POSITIVE := 10;
-		BALANCE_STEP_2 : POSITIVE := 6 -- i.e., balance_values_per_step = 2**VOLUME_STEP_2
+		BALANCE_STEP_2 : POSITIVE := 6 -- i.e., balance_values_per_step = 2**BALANCE_STEP_2
 	);
 	PORT (
 		aclk : IN STD_LOGIC;
@@ -27,128 +27,92 @@ ENTITY balance_controller IS
 END balance_controller;
 
 ARCHITECTURE Behavioral OF balance_controller IS
-	
-	CONSTANT CENTER_VALUE : INTEGER := 2 ** (BALANCE_WIDTH - 1) - 1; -- 511 per BALANCE_WIDTH=10
-	CONSTANT DEADZONE : INTEGER := 32; -- Deadzone da -32 a +32
-	CONSTANT MAX_SHIFT : INTEGER := TDATA_WIDTH - 1; -- Massimo shift possibile
 
-	SIGNAL balance_signed : signed(BALANCE_WIDTH - 1 DOWNTO 0);
-	SIGNAL shift_amount_left, shift_amount_right : NATURAL RANGE 0 TO MAX_SHIFT;
+	CONSTANT BALANCE_STEPS : INTEGER := (2 ** (BALANCE_WIDTH - 1)) / (2 ** BALANCE_STEP_2) + 1;
+	CONSTANT BAL_MID : INTEGER := 2 ** (BALANCE_WIDTH - 1); -- 512 for 10 bit
+	CONSTANT BLOCK_SIZE : INTEGER := 2 ** BALANCE_STEP_2;
+	CONSTANT DEAD_ZONE : INTEGER := BLOCK_SIZE / 2;
 
-	-- Registri di pipeline
-	SIGNAL audio_in_reg : signed(TDATA_WIDTH - 1 DOWNTO 0);
-	SIGNAL tlast_reg : STD_LOGIC;
-	SIGNAL valid_reg : STD_LOGIC;
+	SIGNAL left_channel : INTEGER RANGE 0 TO BALANCE_STEPS := 0;
+	SIGNAL right_channel : INTEGER RANGE 0 TO BALANCE_STEPS := 0;
 
-	-- Segnali di controllo
-	SIGNAL ready_int : STD_LOGIC;
-	SIGNAL processing_active : STD_LOGIC;
+	SIGNAL m_axis_tvalid_int : STD_LOGIC;
 
 BEGIN
-	-- Convert balance input to signed (-512 to +511)
-	balance_signed <= signed(balance);
+	-- Assigning the output signals
+	m_axis_tvalid <= m_axis_tvalid_int;
+	s_axis_tready <= m_axis_tready AND aresetn;
 
-	-- Calcolo dello shift amount con deadzone e scaling esponenziale
-	PROCESS (balance_signed)
-		VARIABLE centered_value : signed(BALANCE_WIDTH - 1 DOWNTO 0);
-		VARIABLE abs_value : unsigned(BALANCE_WIDTH - 2 DOWNTO 0);
-		VARIABLE exp_shift : INTEGER;
-	BEGIN
-		-- Centra il valore intorno a 0 (da -512 a +511 -> da -511 a +511)
-		centered_value := balance_signed - to_signed(CENTER_VALUE, BALANCE_WIDTH);
-
-		-- Inizializzazione
-		shift_amount_left <= 0;
-		shift_amount_right <= 0;
-
-		-- Calcola il valore assoluto
-		IF centered_value(BALANCE_WIDTH - 1) = '1' THEN -- negativo
-			abs_value := unsigned(-centered_value(BALANCE_WIDTH - 2 DOWNTO 0));
-		ELSE
-			abs_value := unsigned(centered_value(BALANCE_WIDTH - 2 DOWNTO 0));
-		END IF;
-
-		-- Applica deadzone e calcola shift
-		IF centered_value > DEADZONE THEN
-			-- Calcola lo shift per il canale sinistro (valori positivi)
-			exp_shift := (to_integer(abs_value) - DEADZONE) / 2 ** BALANCE_STEP_2 + 1;
-
-			IF exp_shift > MAX_SHIFT THEN
-				shift_amount_left <= MAX_SHIFT;
-			ELSE
-				shift_amount_left <= exp_shift;
-			END IF;
-
-		ELSIF centered_value <- DEADZONE THEN
-			-- Calcola lo shift per il canale destro (valori negativi)
-			exp_shift := (to_integer(abs_value) - DEADZONE) / 2 ** BALANCE_STEP_2 + 1;
-
-			IF exp_shift > MAX_SHIFT THEN
-				shift_amount_right <= MAX_SHIFT;
-			ELSE
-				shift_amount_right <= exp_shift;
-			END IF;
-		END IF;
-	END PROCESS;
-
-	-- Il resto del codice rimane IDENTICO alla versione originale
-	-- Logica di controllo AXI
+	-- Balance to exp
 	PROCESS (aclk)
-		VARIABLE temp : signed(TDATA_WIDTH + MAX_SHIFT - 1 DOWNTO 0);
 	BEGIN
+
 		IF rising_edge(aclk) THEN
+
 			IF aresetn = '0' THEN
-				-- Reset asincrono
-				valid_reg <= '0';
-				audio_in_reg <= (OTHERS => '0');
-				tlast_reg <= '0';
-				processing_active <= '0';
+				left_channel <= 0;
+				right_channel <= 0;
+
 			ELSE
-				-- Gestione del flusso dati
-				IF ready_int = '1' THEN
-					valid_reg <= '0';
-
-					IF s_axis_tvalid = '1' THEN
-						-- Registrazione degli ingressi
-						audio_in_reg <= signed(s_axis_tdata);
-						tlast_reg <= s_axis_tlast;
-						valid_reg <= '1';
-						processing_active <= '1';
-					ELSE
-						processing_active <= '0';
-					END IF;
+				-- Balance left and right channels
+				IF unsigned(balance) > (BAL_MID + DEAD_ZONE) THEN
+					left_channel <= to_integer((unsigned(balance) - (BAL_MID + DEAD_ZONE)) SRL BALANCE_STEP_2) + 1;
+				ELSE
+					left_channel <= 0;
 				END IF;
 
-				-- Elaborazione del dato (sempre attiva)
-				IF processing_active = '1' OR valid_reg = '1' THEN
-					temp := resize(audio_in_reg, temp'length);
-
-					IF tlast_reg = '0' THEN
-						temp := shift_right(temp, shift_amount_left);
-					ELSE
-						temp := shift_right(temp, shift_amount_right);
-					END IF;
-
-					-- Saturazione
-					IF temp > 2 ** (TDATA_WIDTH - 1) - 1 THEN
-						m_axis_tdata <= STD_LOGIC_VECTOR(to_signed(2 ** (TDATA_WIDTH - 1) - 1, TDATA_WIDTH));
-					ELSIF temp <- 2 ** (TDATA_WIDTH - 1) THEN
-						m_axis_tdata <= STD_LOGIC_VECTOR(to_signed(-2 ** (TDATA_WIDTH - 1), TDATA_WIDTH));
-					ELSE
-						m_axis_tdata <= STD_LOGIC_VECTOR(temp(TDATA_WIDTH - 1 DOWNTO 0));
-					END IF;
-
-					m_axis_tlast <= tlast_reg;
+				IF unsigned(balance) < (BAL_MID - DEAD_ZONE) THEN
+					right_channel <= to_integer(((BAL_MID - DEAD_ZONE) - unsigned(balance)) SRL BALANCE_STEP_2) + 1;
+				ELSE
+					right_channel <= 0;
 				END IF;
+
 			END IF;
+
 		END IF;
+
 	END PROCESS;
 
-	-- Logica combinazionale per tready
-	ready_int <= m_axis_tready OR NOT valid_reg;
-	s_axis_tready <= ready_int;
+	-- Handle AXIS stream
+	PROCESS (aclk)
+	BEGIN
 
-	-- Assegnazione del valid in uscita
-	m_axis_tvalid <= valid_reg;
+		IF rising_edge(aclk) THEN
+
+			IF aresetn = '0' THEN
+				m_axis_tvalid_int <= '0';
+				m_axis_tlast <= '0';
+				m_axis_tdata <= (OTHERS => '0');
+
+			ELSE
+				-- Default output signals
+				m_axis_tlast <= '0';
+
+				-- Clear valid flag when master interface is ready
+				IF m_axis_tready = '1' THEN
+					m_axis_tvalid_int <= '0';
+				END IF;
+
+				-- Handle the data flow
+				IF s_axis_tvalid = '1' AND m_axis_tready = '1' THEN
+					-- Joystick datasheet: 	(x-axis) a 0 value corresponds to the axis
+					--                      being tilted fully to the left and a value of 1023
+					--                      corresponds fully to the right
+					IF s_axis_tlast = '0' THEN -- left
+						m_axis_tdata <= STD_LOGIC_VECTOR(shift_right(signed(s_axis_tdata), left_channel));
+					ELSE -- right
+						m_axis_tdata <= STD_LOGIC_VECTOR(shift_right(signed(s_axis_tdata), right_channel));
+					END IF;
+
+					m_axis_tvalid_int <= '1';
+					m_axis_tlast <= s_axis_tlast;
+
+				END IF;
+
+			END IF;
+
+		END IF;
+
+	END PROCESS;
 
 END Behavioral;

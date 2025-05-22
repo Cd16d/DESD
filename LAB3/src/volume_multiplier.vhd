@@ -83,6 +83,8 @@ BEGIN
 				-- Handle the data flow
 				IF s_axis_tvalid = '1' AND m_axis_tready = '1' THEN
 					-- Multiply the input data with the volume and assign to output
+					-- Joystick datasheet: 	(y-axis) a value of 0 when it is tilted all the way down 
+					-- 						and a value of 1023 when it is tilted all the way up
 					IF volume_exp_mult >= 0 THEN
 						m_axis_tdata <= STD_LOGIC_VECTOR(
 							shift_left(
