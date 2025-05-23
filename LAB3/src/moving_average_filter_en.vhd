@@ -72,22 +72,16 @@ ARCHITECTURE Behavioral OF moving_average_filter_en IS
 	END COMPONENT;
 
 	-- Internal signals for the all-pass filter
-	SIGNAL all_pass_s_tvalid : STD_LOGIC;
-	SIGNAL all_pass_s_tready : STD_LOGIC;
-
 	SIGNAL all_pass_m_tvalid : STD_LOGIC;
 	SIGNAL all_pass_m_tdata : STD_LOGIC_VECTOR(TDATA_WIDTH - 1 DOWNTO 0);
 	SIGNAL all_pass_m_tlast : STD_LOGIC;
-	SIGNAL all_pass_m_tready : STD_LOGIC;
+	SIGNAL all_pass_s_tready : STD_LOGIC;
 
-	-- Internal signals for the moving average filter
-	SIGNAL moving_avg_s_tvalid : STD_LOGIC;
-	SIGNAL moving_avg_s_tready : STD_LOGIC;
-	
+	-- Internal signals for the moving average filter	
 	SIGNAL moving_avg_m_tvalid : STD_LOGIC;
 	SIGNAL moving_avg_m_tdata : STD_LOGIC_VECTOR(TDATA_WIDTH - 1 DOWNTO 0);
 	SIGNAL moving_avg_m_tlast : STD_LOGIC;
-	SIGNAL moving_avg_m_tready : STD_LOGIC;
+	SIGNAL moving_avg_s_tready : STD_LOGIC;
 
 BEGIN
 
@@ -100,7 +94,7 @@ BEGIN
 		aclk => aclk,
 		aresetn => aresetn,
 
-		s_axis_tvalid => all_pass_s_tvalid,
+		s_axis_tvalid => s_axis_tvalid,
 		s_axis_tdata => s_axis_tdata,
 		s_axis_tlast => s_axis_tlast,
 		s_axis_tready => all_pass_s_tready,
@@ -108,7 +102,7 @@ BEGIN
 		m_axis_tvalid => all_pass_m_tvalid,
 		m_axis_tdata => all_pass_m_tdata,
 		m_axis_tlast => all_pass_m_tlast,
-		m_axis_tready => all_pass_m_tready
+		m_axis_tready => m_axis_tready
 	);
 
 	-- Instantiate the moving average filter
@@ -121,7 +115,7 @@ BEGIN
 		aclk => aclk,
 		aresetn => aresetn,
 
-		s_axis_tvalid => moving_avg_s_tvalid,
+		s_axis_tvalid => s_axis_tvalid,
 		s_axis_tdata => s_axis_tdata,
 		s_axis_tlast => s_axis_tlast,
 		s_axis_tready => moving_avg_s_tready,
@@ -129,15 +123,8 @@ BEGIN
 		m_axis_tvalid => moving_avg_m_tvalid,
 		m_axis_tdata => moving_avg_m_tdata,
 		m_axis_tlast => moving_avg_m_tlast,
-		m_axis_tready => moving_avg_m_tready
+		m_axis_tready => m_axis_tready
 	);
-
-	-- Assign filter control signals based on enable_filter
-	all_pass_s_tvalid    <= s_axis_tvalid WHEN enable_filter = '0' ELSE '0';
-	moving_avg_s_tvalid  <= s_axis_tvalid WHEN enable_filter = '1' ELSE '0';
-
-	all_pass_m_tready    <= m_axis_tready WHEN enable_filter = '0' ELSE '0';
-	moving_avg_m_tready  <= m_axis_tready WHEN enable_filter = '1' ELSE '0';
 
 	-- Main AXIS assignments based on enable_filter
 	s_axis_tready        <= all_pass_s_tready   WHEN enable_filter = '0' ELSE moving_avg_s_tready;

@@ -44,7 +44,7 @@ ARCHITECTURE Behavioral OF LFO IS
 
     SIGNAL step_clk_cycles : INTEGER RANGE LFO_CLK_CYCLES_MIN TO LFO_CLK_CYCLES_MAX := LFO_COUNTER_BASE_CLK_CYCLES;
     SIGNAL step_counter : INTEGER RANGE 0 TO LFO_CLK_CYCLES_MAX := 0;
-    SIGNAL tri_counter : SIGNED(TRIANGULAR_COUNTER_LENGHT - 1 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL tri_counter : SIGNED(TRIANGULAR_COUNTER_LENGHT DOWNTO 0) := (OTHERS => '0');
     SIGNAL direction_up : STD_LOGIC := '1';
 
     SIGNAL m_axis_tvalid_int : STD_LOGIC := '0';
@@ -68,7 +68,7 @@ BEGIN
 
             ELSE
                 -- Set the step_clk_cycles based on the joystick input
-                step_clk_cycles <= LFO_COUNTER_BASE_CLK_CYCLES - ADJUSTMENT_FACTOR * (JSTK_CENTER_VALUE - to_integer(unsigned(lfo_period)));
+                step_clk_cycles <= LFO_COUNTER_BASE_CLK_CYCLES - ADJUSTMENT_FACTOR * (to_integer(unsigned(lfo_period)) - JSTK_CENTER_VALUE);
 
                 IF lfo_enable = '1' THEN
 
