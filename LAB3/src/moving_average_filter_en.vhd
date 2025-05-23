@@ -141,6 +141,7 @@ BEGIN
 
 	-- Main AXIS assignments based on enable_filter
 	s_axis_tready        <= all_pass_s_tready   WHEN enable_filter = '0' ELSE moving_avg_s_tready;
+		
 	m_axis_tvalid        <= all_pass_m_tvalid   WHEN enable_filter = '0' ELSE moving_avg_m_tvalid;
 	m_axis_tdata         <= all_pass_m_tdata    WHEN enable_filter = '0' ELSE moving_avg_m_tdata;
 	m_axis_tlast         <= all_pass_m_tlast    WHEN enable_filter = '0' ELSE moving_avg_m_tlast;

@@ -40,7 +40,7 @@ ARCHITECTURE Behavioral OF balance_controller IS
 BEGIN
 	-- Assigning the output signals
 	m_axis_tvalid <= m_axis_tvalid_int;
-	s_axis_tready <= m_axis_tready OR NOT m_axis_tvalid_int;
+	s_axis_tready <= (m_axis_tready OR NOT m_axis_tvalid_int) AND aresetn;
 
 	-- Balance to exp process to avoid changing the balance value when multiplying it for the sample data
 	BALANCE_CALC : PROCESS (aclk)

@@ -42,7 +42,6 @@ BEGIN
                 ELSE
                     -- volume/balance control
                     volume <= jstck_y;
-                    lfo_period <= (OTHERS => '0');
                     
                 END IF;
 

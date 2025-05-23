@@ -37,22 +37,23 @@ ARCHITECTURE Behavioral OF LFO IS
 
     CONSTANT LFO_COUNTER_BASE_PERIOD_US : INTEGER := 1000; -- 1ms
     CONSTANT ADJUSTMENT_FACTOR : INTEGER := 90;
-    CONSTANT JSTK_CENTER_VALUE : INTEGER := 2 ** (JOYSTICK_LENGHT - 1);
-    CONSTANT LFO_COUNTER_BASE_CLK_CYCLES : INTEGER := LFO_COUNTER_BASE_PERIOD_US * 1000 / CLK_PERIOD_NS;
+    CONSTANT JSTK_CENTER_VALUE : INTEGER := 2 ** (JOYSTICK_LENGHT - 1); -- 512 for 10 bits
+    CONSTANT LFO_COUNTER_BASE_CLK_CYCLES : INTEGER := LFO_COUNTER_BASE_PERIOD_US * 1000 / CLK_PERIOD_NS; -- 1ms = 100_000 clk cycles
+    CONSTANT LFO_CLK_CYCLES_MIN : INTEGER := LFO_COUNTER_BASE_CLK_CYCLES - ADJUSTMENT_FACTOR * (2 ** (JOYSTICK_LENGHT - 1)); -- 53_920 clk cycles
+    CONSTANT LFO_CLK_CYCLES_MAX : INTEGER := LFO_COUNTER_BASE_CLK_CYCLES + ADJUSTMENT_FACTOR * (2 ** (JOYSTICK_LENGHT - 1) - 1); -- 145_990 clk cycles
 
-    SIGNAL step_clk_cycles : INTEGER := LFO_COUNTER_BASE_CLK_CYCLES;
-    SIGNAL step_counter : INTEGER RANGE 0 TO 2 ** TRIANGULAR_COUNTER_LENGHT - 1 := 0;
-    SIGNAL tri_counter : signed(TRIANGULAR_COUNTER_LENGHT - 1 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL step_clk_cycles : INTEGER RANGE LFO_CLK_CYCLES_MIN TO LFO_CLK_CYCLES_MAX := LFO_COUNTER_BASE_CLK_CYCLES;
+    SIGNAL step_counter : INTEGER RANGE 0 TO LFO_CLK_CYCLES_MAX := 0;
+    SIGNAL tri_counter : SIGNED(TRIANGULAR_COUNTER_LENGHT - 1 DOWNTO 0) := (OTHERS => '0');
     SIGNAL direction_up : STD_LOGIC := '1';
 
-    SIGNAL s_axis_tready_int : STD_LOGIC := '0';
     SIGNAL m_axis_tvalid_int : STD_LOGIC := '0';
 
 BEGIN
 
-    -- Output assignments
-    s_axis_tready <= s_axis_tready_int;
-    m_axis_tvalid <= m_axis_tvalid_int;
+    -- Assigning the output signals
+	m_axis_tvalid <= m_axis_tvalid_int;
+	s_axis_tready <= (m_axis_tready OR NOT m_axis_tvalid_int) AND aresetn;
 
     -- Optimized single process for LFO step and triangular waveform generation
     PROCESS (aclk)
@@ -60,24 +61,21 @@ BEGIN
         IF rising_edge(aclk) THEN
 
             IF aresetn = '0' THEN
+                step_clk_cycles <= LFO_COUNTER_BASE_CLK_CYCLES;
                 step_counter <= 0;
                 tri_counter <= (OTHERS => '0');
                 direction_up <= '1';
 
             ELSE
-                -- Clamp step_clk_cycles to a minimum of 1 to avoid negative or zero values
-                IF (LFO_COUNTER_BASE_CLK_CYCLES - ADJUSTMENT_FACTOR * to_integer(JSTK_CENTER_VALUE - unsigned(lfo_period))) < 1 THEN
-                    step_clk_cycles <= 1;
-                ELSE
-                    step_clk_cycles <= LFO_COUNTER_BASE_CLK_CYCLES - ADJUSTMENT_FACTOR * to_integer(JSTK_CENTER_VALUE - unsigned(lfo_period));
-                END IF;
+                -- Set the step_clk_cycles based on the joystick input
+                step_clk_cycles <= LFO_COUNTER_BASE_CLK_CYCLES - ADJUSTMENT_FACTOR * (JSTK_CENTER_VALUE - to_integer(unsigned(lfo_period)));
 
                 IF lfo_enable = '1' THEN
 
                     IF step_counter >= step_clk_cycles THEN
                         step_counter <= 0;
 
-                        IF tri_counter = 2 ** TRIANGULAR_COUNTER_LENGHT - 2 THEN
+                        IF tri_counter = (2 ** TRIANGULAR_COUNTER_LENGHT) - 2 THEN
                             direction_up <= '0';
 
                         ELSIF tri_counter = 1 THEN
@@ -107,14 +105,12 @@ BEGIN
     END PROCESS;
 
     -- Handshake logic for the AXIS interface
-    PROCESS (aclk)
+    AXIS: PROCESS (aclk)
     BEGIN
         IF rising_edge(aclk) THEN
 
             IF aresetn = '0' THEN
-                s_axis_tready_int <= '0';
                 m_axis_tvalid_int <= '0';
-                m_axis_tdata <= (OTHERS => '0');
                 m_axis_tlast <= '0';
 
             ELSE
@@ -123,12 +119,15 @@ BEGIN
                     m_axis_tvalid_int <= '0';
                 END IF;
 
-                IF s_axis_tvalid = '1' AND (m_axis_tvalid_int = '0' OR m_axis_tready = '1') THEN
+                IF s_axis_tvalid = '1' AND m_axis_tready = '1' THEN
                     IF lfo_enable = '1' THEN
                         m_axis_tdata <= STD_LOGIC_VECTOR(
                             resize(
-                                signed(s_axis_tdata) * tri_counter,
-                                m_axis_tdata'LENGTH
+                                shift_right(
+                                    signed(s_axis_tdata) * tri_counter,
+                                    TRIANGULAR_COUNTER_LENGHT
+                                ),
+                                CHANNEL_LENGHT
                             )
                         );
 
@@ -136,12 +135,9 @@ BEGIN
                         m_axis_tdata <= s_axis_tdata;
 
                     END IF;
-                    s_axis_tready_int <= '1';
+
                     m_axis_tvalid_int <= '1';
                     m_axis_tlast <= s_axis_tlast;
-
-                ELSE
-                    s_axis_tready_int <= '0';
 
                 END IF;
 
@@ -149,6 +145,6 @@ BEGIN
 
         END IF;
 
-    END PROCESS;
+    END PROCESS AXIS;
 
 END ARCHITECTURE Behavioral;

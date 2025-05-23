@@ -1,121 +1,122 @@
-library IEEE;
-use IEEE.STD_LOGIC_1164.ALL;
-use IEEE.NUMERIC_STD.ALL;
+LIBRARY IEEE;
+USE IEEE.STD_LOGIC_1164.ALL;
+USE IEEE.NUMERIC_STD.ALL;
 
-entity led_level_controller is
-    generic(
-        NUM_LEDS : positive := 16;
-        CHANNEL_LENGHT  : positive := 24;
-        refresh_time_ms: positive :=1;
-        clock_period_ns: positive :=10
+ENTITY led_level_controller IS
+    GENERIC (
+        NUM_LEDS : POSITIVE := 16;
+        CHANNEL_LENGHT : POSITIVE := 24;
+        refresh_time_ms : POSITIVE := 1;
+        clock_period_ns : POSITIVE := 10
     );
-    Port (
-        
-        aclk			: in std_logic;
-        aresetn			: in std_logic;
-        
-        led    : out std_logic_vector(NUM_LEDS-1 downto 0);
+    PORT (
 
-        s_axis_tvalid	: in std_logic;
-        s_axis_tdata	: in std_logic_vector(CHANNEL_LENGHT-1 downto 0);
-        s_axis_tlast    : in std_logic;
-        s_axis_tready	: out std_logic
+        aclk : IN STD_LOGIC;
+        aresetn : IN STD_LOGIC;
+
+        led : OUT STD_LOGIC_VECTOR(NUM_LEDS - 1 DOWNTO 0);
+
+        s_axis_tvalid : IN STD_LOGIC;
+        s_axis_tdata : IN STD_LOGIC_VECTOR(CHANNEL_LENGHT - 1 DOWNTO 0);
+        s_axis_tlast : IN STD_LOGIC;
+        s_axis_tready : OUT STD_LOGIC
 
     );
-end led_level_controller;
+END led_level_controller;
 
-architecture Behavioral of led_level_controller is
-    constant REFRESH_CYCLES : natural := (refresh_time_ms * 1_000_000) / clock_period_ns;
+ARCHITECTURE Behavioral OF led_level_controller IS
+    CONSTANT REFRESH_CYCLES : NATURAL := (refresh_time_ms * 1_000_000) / clock_period_ns;
 
-    signal volume_value      : signed(CHANNEL_LENGHT-1 downto 0) := (others => '0');
-    signal abs_audio_left    : unsigned(CHANNEL_LENGHT-2 downto 0) := (others => '0');
-    signal abs_audio_right   : unsigned(CHANNEL_LENGHT-2 downto 0) := (others => '0');
-    signal leds_int          : std_logic_vector(NUM_LEDS-1 downto 0) := (others => '0');
-    signal led_update        : std_logic := '0';
-    signal refresh_counter   : natural range 0 to REFRESH_CYCLES-1 := 0;
+    SIGNAL volume_value : signed(CHANNEL_LENGHT - 1 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL abs_audio_left : unsigned(CHANNEL_LENGHT - 2 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL abs_audio_right : unsigned(CHANNEL_LENGHT - 2 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL leds_int : STD_LOGIC_VECTOR(NUM_LEDS - 1 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL led_update : STD_LOGIC := '0';
+    SIGNAL refresh_counter : NATURAL RANGE 0 TO REFRESH_CYCLES - 1 := 0;
 
-begin
+BEGIN
     led <= leds_int;
     s_axis_tready <= '1';
 
-    -- Registrazione del valore audio assoluto
-    process(aclk)
-        variable sdata_signed : signed(CHANNEL_LENGHT-1 downto 0);
-        variable abs_value    : unsigned(CHANNEL_LENGHT-1 downto 0);
-    begin
-        if rising_edge(aclk) then
-            if aresetn = '0' then
-                volume_value   <= (others => '0');
-                abs_audio_left <= (others => '0');
-                abs_audio_right<= (others => '0');
-            elsif s_axis_tvalid = '1' then
+    -- Registering the absolute audio value
+    PROCESS (aclk)
+        VARIABLE sdata_signed : signed(CHANNEL_LENGHT - 1 DOWNTO 0);
+        VARIABLE abs_value : unsigned(CHANNEL_LENGHT - 1 DOWNTO 0);
+    BEGIN
+        IF rising_edge(aclk) THEN
+            IF aresetn = '0' THEN
+                volume_value <= (OTHERS => '0');
+                abs_audio_left <= (OTHERS => '0');
+                abs_audio_right <= (OTHERS => '0');
+            ELSIF s_axis_tvalid = '1' THEN
                 sdata_signed := signed(s_axis_tdata);
                 volume_value <= sdata_signed;
-                -- Calcolo valore assoluto
-                if sdata_signed(CHANNEL_LENGHT-1) = '1' then
+                -- Absolute value calculation
+                IF sdata_signed(CHANNEL_LENGHT - 1) = '1' THEN
                     abs_value := unsigned(-sdata_signed);
-                else
+                ELSE
                     abs_value := unsigned(sdata_signed);
-                end if;
-                -- Assegna al canale corretto
-                if s_axis_tlast = '1' then -- Canale sinistro
-                    abs_audio_left <= abs_value(CHANNEL_LENGHT-2 downto 0);
-                else -- Canale destro
-                    abs_audio_right <= abs_value(CHANNEL_LENGHT-2 downto 0);
-                end if;
-            end if;
-        end if;
-    end process;
+                END IF;
+                -- Assign to the correct channel
+                IF s_axis_tlast = '1' THEN -- Left channel
+                    abs_audio_left <= abs_value(CHANNEL_LENGHT - 2 DOWNTO 0);
+                ELSE -- Right channel
+                    abs_audio_right <= abs_value(CHANNEL_LENGHT - 2 DOWNTO 0);
+                END IF;
+            END IF;
+        END IF;
+    END PROCESS;
 
-    -- Contatore di refresh
-    process(aclk)
-    begin
-        if rising_edge(aclk) then
-            if aresetn = '0' then
+    -- Refresh counter
+    PROCESS (aclk)
+    BEGIN
+        IF rising_edge(aclk) THEN
+            IF aresetn = '0' THEN
                 refresh_counter <= 0;
                 led_update <= '0';
-            elsif refresh_counter = REFRESH_CYCLES-1 then
+            ELSIF refresh_counter = REFRESH_CYCLES - 1 THEN
                 refresh_counter <= 0;
                 led_update <= '1';
-            else
+            ELSE
                 refresh_counter <= refresh_counter + 1;
                 led_update <= '0';
-            end if;
-        end if;
-    end process;
+            END IF;
+        END IF;
+    END PROCESS;
 
-    -- Scaling lineare e aggiornamento LED
-    process(aclk)
-        variable leds_on        : natural range 0 to NUM_LEDS;
-        variable temp_led_level : integer range 0 to NUM_LEDS;
-        variable abs_audio_sum  : unsigned(CHANNEL_LENGHT-1 downto 0);
-    begin
-        if rising_edge(aclk) then
-            if aresetn = '0' then
-                leds_int <= (others => '0');
-            elsif led_update = '1' then
+    -- Linear scaling and LED update
+    PROCESS (aclk)
+        VARIABLE leds_on : NATURAL RANGE 0 TO NUM_LEDS;
+        VARIABLE temp_led_level : INTEGER RANGE 0 TO NUM_LEDS;
+        VARIABLE abs_audio_sum : unsigned(CHANNEL_LENGHT - 1 DOWNTO 0);
+    BEGIN
+        IF rising_edge(aclk) THEN
+            IF aresetn = '0' THEN
+                leds_int <= (OTHERS => '0');
+            ELSIF led_update = '1' THEN
                 abs_audio_sum := resize(abs_audio_left, CHANNEL_LENGHT) + resize(abs_audio_right, CHANNEL_LENGHT);
 
-                if (abs_audio_left = 0 and abs_audio_right = 0) then
+                IF (abs_audio_left = 0 AND abs_audio_right = 0) THEN
                     temp_led_level := 0;
-                else
-                    -- Scaling automatico: puoi regolare la costante di shift per la sensibilità
-                    temp_led_level := 1 + to_integer(shift_right(abs_audio_sum, CHANNEL_LENGHT-4));
-                end if;
+                ELSE
+                    -- Automatic scaling
+                    -- Sensitivity can be adjusted by changing the shift constant
+                    temp_led_level := 1 + to_integer(shift_right(abs_audio_sum, CHANNEL_LENGHT - 4));
+                END IF;
 
-                -- Limita al massimo numero di LED
-                if temp_led_level > NUM_LEDS then
+                -- Limit to the maximum number of LEDs
+                IF temp_led_level > NUM_LEDS THEN
                     leds_on := NUM_LEDS;
-                else
+                ELSE
                     leds_on := temp_led_level;
-                end if;
+                END IF;
 
-                -- Aggiorna i LED
-                leds_int <= (others => '0');
-                if leds_on > 0 then
-                    leds_int(leds_on-1 downto 0) <= (others => '1');
-                end if;
-            end if;
-        end if;
-    end process;
-end Behavioral;
+                -- Update the LEDs
+                leds_int <= (OTHERS => '0');
+                IF leds_on > 0 THEN
+                    leds_int(leds_on - 1 DOWNTO 0) <= (OTHERS => '1');
+                END IF;
+            END IF;
+        END IF;
+    END PROCESS;
+END Behavioral;

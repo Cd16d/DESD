@@ -52,8 +52,9 @@ BEGIN
 
 				-- Handle data transfer
 				IF s_axis_tvalid = '1' AND m_axis_tready = '1' THEN
-					m_axis_tvalid_int <= '1';
 					m_axis_tdata <= s_axis_tdata;
+					
+					m_axis_tvalid_int <= '1';
 					m_axis_tlast <= s_axis_tlast;
 					
 				END IF;
