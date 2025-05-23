@@ -24,7 +24,6 @@ END all_pass_filter;
 
 ARCHITECTURE Behavioral OF all_pass_filter IS
 
-	SIGNAL s_axis_tready_int : STD_LOGIC := '0';
 	SIGNAL m_axis_tvalid_int : STD_LOGIC := '0';
 
 BEGIN
@@ -33,17 +32,17 @@ BEGIN
     -- of the moving_average_filter, but does not process or modify the samples.
     -- It simply passes input data to the output unchanged, ensuring the same latency and interface behavior.
 
-	-- Output assignments
-	s_axis_tready <= s_axis_tready_int;
+	-- Assigning the output signals
 	m_axis_tvalid <= m_axis_tvalid_int;
+	s_axis_tready <= (m_axis_tready OR NOT m_axis_tvalid_int) AND aresetn;
 
 	PROCESS (aclk)
 	BEGIN
 		IF rising_edge(aclk) THEN
 
 			IF aresetn = '0' THEN
-				s_axis_tready_int <= '0';
 				m_axis_tvalid_int <= '0';
+				m_axis_tlast <= '0';
 
 			ELSE
 				-- Clear valid flag when master interface is ready
@@ -51,16 +50,12 @@ BEGIN
 					m_axis_tvalid_int <= '0';
 				END IF;
 
-				-- Hndle data transfer
-				IF s_axis_tvalid = '1' AND (m_axis_tvalid_int = '0' OR m_axis_tready = '1') THEN
-					s_axis_tready_int <= '1';
+				-- Handle data transfer
+				IF s_axis_tvalid = '1' AND m_axis_tready = '1' THEN
 					m_axis_tvalid_int <= '1';
 					m_axis_tdata <= s_axis_tdata;
 					m_axis_tlast <= s_axis_tlast;
-
-				ELSE
-					s_axis_tready_int <= '0';
-
+					
 				END IF;
 
 			END IF;

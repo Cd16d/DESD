@@ -41,14 +41,13 @@ ARCHITECTURE Behavioral OF moving_average_filter IS
 	SIGNAL sum_sx : signed(TDATA_WIDTH + FILTER_ORDER_POWER - 1 DOWNTO 0) := (OTHERS => '0');
 	SIGNAL wr_ptr_sx : INTEGER RANGE 0 TO FILTER_ORDER - 1 := 0;
 
-	SIGNAL s_axis_tready_int : STD_LOGIC := '0';
 	SIGNAL m_axis_tvalid_int : STD_LOGIC := '0';
 
 BEGIN
 
-	-- Output assignments
+	-- Assigning the output signals
 	m_axis_tvalid <= m_axis_tvalid_int;
-	s_axis_tready <= s_axis_tready_int;
+	s_axis_tready <= (m_axis_tready OR NOT m_axis_tvalid_int) AND aresetn;
 
 	PROCESS (aclk)
 	BEGIN
@@ -57,14 +56,14 @@ BEGIN
 
 			IF aresetn = '0' THEN
 				samples_dx <= (OTHERS => (OTHERS => '0'));
+				samples_sx <= (OTHERS => (OTHERS => '0'));
 				sum_dx <= (OTHERS => '0');
+				sum_sx <= (OTHERS => '0');
 				wr_ptr_dx <= 0;
+				wr_ptr_sx <= 0;
 
-				s_axis_tready_int <= '0';
 				m_axis_tvalid_int <= '0';
-
 				m_axis_tlast <= '0';
-				m_axis_tdata <= (OTHERS => '0');
 
 			ELSE
 				-- Clear valid flag when master interface is ready
@@ -73,8 +72,10 @@ BEGIN
 				END IF;
 
 				-- Get and process data
-				IF s_axis_tvalid = '1' AND (m_axis_tvalid_int = '0' OR m_axis_tready = '1') THEN
-					IF s_axis_tlast = '1' THEN
+				IF s_axis_tvalid = '1' AND m_axis_tready = '1' THEN
+
+					IF s_axis_tlast = '1' THEN 
+						-- Right channel
 						-- Circular buffer overwrite oldest saple with the new one from next clk cycle
 						samples_dx(wr_ptr_dx) <= signed(s_axis_tdata);
 
@@ -95,6 +96,7 @@ BEGIN
 							)
 						);
 					ELSE
+						-- Left channel
 						-- Circular buffer overwrite oldest saple with the new one from next clk cycle
 						samples_sx(wr_ptr_sx) <= signed(s_axis_tdata);
 
@@ -116,12 +118,8 @@ BEGIN
 						);
 					END IF;
 
-					s_axis_tready_int <= '1';
 					m_axis_tvalid_int <= '1';
 					m_axis_tlast <= s_axis_tlast;
-
-				ELSE
-					s_axis_tready_int <= '0';
 
 				END IF;
 
