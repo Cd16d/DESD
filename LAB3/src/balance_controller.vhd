@@ -40,9 +40,7 @@ ARCHITECTURE Behavioral OF balance_controller IS
 BEGIN
 	-- Assigning the output signals
 	m_axis_tvalid <= m_axis_tvalid_int;
-	s_axis_tready <= (m_axis_tready OR NOT m_axis_tvalid_int) AND aresetn; -- Chiedere e in caso togliere 'AND aresetn'
-
-
+	s_axis_tready <= m_axis_tready OR NOT m_axis_tvalid_int;
 
 	-- Balance to exp process to avoid changing the balance value when multiplying it for the sample data
 	BALANCE_CALC : PROCESS (aclk)
@@ -56,13 +54,13 @@ BEGIN
 
 			ELSE
 				-- Balance left and right channels
-				IF unsigned(balance) > (BAL_MID + DEAD_ZONE) THEN
+				IF to_integer(unsigned(balance)) > (BAL_MID + DEAD_ZONE) THEN
 					left_channel <= to_integer((unsigned(balance) - to_unsigned(BAL_MID + DEAD_ZONE, balance'length)) SRL BALANCE_STEP_2) + 1; -- +1 due to shift approximation defect
 				ELSE
 					left_channel <= 0;
 				END IF;
 
-				IF unsigned(balance) < (BAL_MID - DEAD_ZONE) THEN
+				IF to_integer(unsigned(balance)) < (BAL_MID - DEAD_ZONE) THEN
 					right_channel <= to_integer((to_unsigned(BAL_MID - DEAD_ZONE, balance'length) - unsigned(balance)) SRL BALANCE_STEP_2) + 1;
 				ELSE
 					right_channel <= 0;
@@ -85,9 +83,6 @@ BEGIN
 				m_axis_tlast <= '0';
 
 			ELSE
-				-- Default output signals
-				m_axis_tlast <= '0';
-
 				-- Clear valid flag when master interface is ready
 				IF m_axis_tready = '1' THEN
 					m_axis_tvalid_int <= '0';

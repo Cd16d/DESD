@@ -115,7 +115,7 @@ BEGIN
         WAIT UNTIL rising_edge(aclk);
 
         -- Set volume to mid (no gain/loss)
-        volume <= volume_mem(0);
+        volume <= volume_mem(7);
         WAIT UNTIL rising_edge(aclk);
 
         -- Send all samples

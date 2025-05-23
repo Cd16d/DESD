@@ -28,12 +28,15 @@ END volume_saturator;
 
 ARCHITECTURE Behavioral OF volume_saturator IS
 
+	CONSTANT HIGHER_BOUND_VEC : STD_LOGIC_VECTOR(TDATA_WIDTH - 1 DOWNTO 0) := STD_LOGIC_VECTOR(to_signed(HIGHER_BOUND, TDATA_WIDTH));
+	CONSTANT LOWER_BOUND_VEC : STD_LOGIC_VECTOR(TDATA_WIDTH - 1 DOWNTO 0) := STD_LOGIC_VECTOR(to_signed(LOWER_BOUND, TDATA_WIDTH));
+
 	SIGNAL m_axis_tvalid_int : STD_LOGIC;
 
 BEGIN
 	-- Output assignments
 	m_axis_tvalid <= m_axis_tvalid_int;
-	s_axis_tready <= m_axis_tready AND aresetn;
+	s_axis_tready <= (m_axis_tready OR NOT m_axis_tvalid_int) AND aresetn;
 
 	PROCESS (aclk)
 	BEGIN
@@ -43,9 +46,8 @@ BEGIN
 			IF aresetn = '0' THEN
 				m_axis_tvalid_int <= '0';
 				m_axis_tlast <= '0';
-				m_axis_tdata <= (OTHERS => '0');
 
-			ELSE
+			ELSE				
 				-- Clear valid flag when master interface is ready
 				IF m_axis_tready = '1' THEN
 					m_axis_tvalid_int <= '0';
@@ -54,11 +56,11 @@ BEGIN
 				-- Handle the data flow
 				IF s_axis_tvalid = '1' AND m_axis_tready = '1' THEN
 					-- Check if the input data is within the bounds else saturate
-					IF signed(s_axis_tdata) > to_signed(HIGHER_BOUND, s_axis_tdata'length) THEN
-						m_axis_tdata <= STD_LOGIC_VECTOR(to_signed(HIGHER_BOUND, TDATA_WIDTH));
+					IF signed(s_axis_tdata) > signed(HIGHER_BOUND_VEC) THEN
+						m_axis_tdata <= HIGHER_BOUND_VEC;
 
-					ELSIF signed(s_axis_tdata) < to_signed(LOWER_BOUND, s_axis_tdata'length) THEN
-						m_axis_tdata <= STD_LOGIC_VECTOR(to_signed(LOWER_BOUND, TDATA_WIDTH));
+					ELSIF signed(s_axis_tdata) < signed(LOWER_BOUND_VEC) THEN
+						m_axis_tdata <= LOWER_BOUND_VEC;
 
 					ELSE
 						m_axis_tdata <= STD_LOGIC_VECTOR(resize(signed(s_axis_tdata), TDATA_WIDTH));

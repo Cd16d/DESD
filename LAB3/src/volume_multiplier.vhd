@@ -76,9 +76,6 @@ BEGIN
 				m_axis_tlast <= '0';
 
 			ELSE
-				-- Default output signals
-				m_axis_tlast <= '0';
-
 				-- Clear valid flag when master interface is ready
 				IF m_axis_tready = '1' THEN
 					m_axis_tvalid_int <= '0';
@@ -90,10 +87,10 @@ BEGIN
 					-- Joystick datasheet: 	(y-axis) a value of 0 when it is tilted all the way down 
 					-- 						and a value of 1023 when it is tilted all the way up
 					IF volume_exp_mult >= 0 THEN
-						m_axis_tdata <= STD_LOGIC_VECTOR(resize(shift_left(signed(s_axis_tdata), volume_exp_mult), m_axis_tdata'LENGTH));
+						m_axis_tdata <= STD_LOGIC_VECTOR(shift_left(resize(signed(s_axis_tdata), m_axis_tdata'LENGTH), volume_exp_mult));
 
 					ELSE
-						m_axis_tdata <= STD_LOGIC_VECTOR(resize(shift_right(signed(s_axis_tdata), - volume_exp_mult), m_axis_tdata'LENGTH));
+						m_axis_tdata <= STD_LOGIC_VECTOR(shift_right(resize(signed(s_axis_tdata), m_axis_tdata'LENGTH), - volume_exp_mult));
 
 					END IF;
 

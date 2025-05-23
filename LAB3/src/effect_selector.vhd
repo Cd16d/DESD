@@ -35,14 +35,14 @@ BEGIN
             ELSE
                 balance <= jstck_x;
 
-                IF effect = '0' THEN
+                IF effect = '1' THEN
+                    -- LFO control
+                    lfo_period <= jstck_y;
+
+                ELSE
                     -- volume/balance control
                     volume <= jstck_y;
                     lfo_period <= (OTHERS => '0');
-
-                ELSE
-                    -- LFO control
-                    lfo_period <= jstck_y;
                     
                 END IF;
 
