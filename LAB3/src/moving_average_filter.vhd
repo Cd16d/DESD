@@ -31,15 +31,15 @@ ARCHITECTURE Behavioral OF moving_average_filter IS
 
 	TYPE sample_array IS ARRAY (0 TO FILTER_ORDER - 1) OF signed(TDATA_WIDTH - 1 DOWNTO 0);
 
-	-- DX
-	SIGNAL samples_dx : sample_array := (OTHERS => (OTHERS => '0'));
-	SIGNAL sum_dx : signed(TDATA_WIDTH + FILTER_ORDER_POWER - 1 DOWNTO 0) := (OTHERS => '0');
-	SIGNAL wr_ptr_dx : INTEGER RANGE 0 TO FILTER_ORDER - 1 := 0;
+	-- RX
+	SIGNAL samples_rx : sample_array := (OTHERS => (OTHERS => '0'));
+	SIGNAL sum_rx : signed(TDATA_WIDTH + FILTER_ORDER_POWER - 1 DOWNTO 0) := (OTHERS => '0');
+	SIGNAL wr_ptr_rx : INTEGER RANGE 0 TO FILTER_ORDER - 1 := 0;
 
-	-- SX
-	SIGNAL samples_sx : sample_array := (OTHERS => (OTHERS => '0'));
-	SIGNAL sum_sx : signed(TDATA_WIDTH + FILTER_ORDER_POWER - 1 DOWNTO 0) := (OTHERS => '0');
-	SIGNAL wr_ptr_sx : INTEGER RANGE 0 TO FILTER_ORDER - 1 := 0;
+	-- LX
+	SIGNAL samples_lx : sample_array := (OTHERS => (OTHERS => '0'));
+	SIGNAL sum_lx : signed(TDATA_WIDTH + FILTER_ORDER_POWER - 1 DOWNTO 0) := (OTHERS => '0');
+	SIGNAL wr_ptr_lx : INTEGER RANGE 0 TO FILTER_ORDER - 1 := 0;
 
 	-- Trigger signal to indicate when to output data
 	SIGNAL trigger : STD_LOGIC := '0';
@@ -61,12 +61,12 @@ BEGIN
 		IF rising_edge(aclk) THEN
 
 			IF aresetn = '0' THEN
-				samples_dx <= (OTHERS => (OTHERS => '0'));
-				samples_sx <= (OTHERS => (OTHERS => '0'));
-				sum_dx <= (OTHERS => '0');
-				sum_sx <= (OTHERS => '0');
-				wr_ptr_dx <= 0;
-				wr_ptr_sx <= 0;
+				samples_rx <= (OTHERS => (OTHERS => '0'));
+				samples_lx <= (OTHERS => (OTHERS => '0'));
+				sum_rx <= (OTHERS => '0');
+				sum_lx <= (OTHERS => '0');
+				wr_ptr_rx <= 0;
+				wr_ptr_lx <= 0;
 
 				s_axis_tlast_reg <= '0';
 				s_axis_tready_int <= '0';
@@ -85,7 +85,7 @@ BEGIN
 						m_axis_tdata <= STD_LOGIC_VECTOR(
 							resize(
 								shift_right(
-									sum_dx,
+									sum_rx,
 									FILTER_ORDER_POWER
 								),
 								m_axis_tdata'length
@@ -96,7 +96,7 @@ BEGIN
 						m_axis_tdata <= STD_LOGIC_VECTOR(
 							resize(
 								shift_right(
-									sum_sx,
+									sum_lx,
 									FILTER_ORDER_POWER
 								),
 								m_axis_tdata'length
@@ -116,25 +116,25 @@ BEGIN
 					IF s_axis_tlast = '1' THEN
 						-- Right channel
 						-- Circular buffer overwrite oldest saple with the new one from next clk cycle
-						samples_dx(wr_ptr_dx) <= signed(s_axis_tdata);
+						samples_rx(wr_ptr_rx) <= signed(s_axis_tdata);
 
 						-- Update the write pointer
-						wr_ptr_dx <= (wr_ptr_dx + 1) MOD FILTER_ORDER;
+						wr_ptr_rx <= (wr_ptr_rx + 1) MOD FILTER_ORDER;
 
-						-- Update the sum_dx removing the oldest sample and adding the new one
-						sum_dx <= sum_dx - samples_dx(wr_ptr_dx) + signed(s_axis_tdata);
+						-- Update the sum_rx removing the oldest sample and adding the new one
+						sum_rx <= sum_rx - samples_rx(wr_ptr_rx) + signed(s_axis_tdata);
 
 						s_axis_tlast_reg <= s_axis_tlast;
 					ELSE
 						-- Left channel
 						-- Circular buffer overwrite oldest saple with the new one from next clk cycle
-						samples_sx(wr_ptr_sx) <= signed(s_axis_tdata);
+						samples_lx(wr_ptr_lx) <= signed(s_axis_tdata);
 
 						-- Update the write pointer
-						wr_ptr_sx <= (wr_ptr_sx + 1) MOD FILTER_ORDER;
+						wr_ptr_lx <= (wr_ptr_lx + 1) MOD FILTER_ORDER;
 
-						-- Update the sum_dx removing the oldest sample and adding the new one
-						sum_sx <= sum_sx - samples_sx(wr_ptr_sx) + signed(s_axis_tdata);
+						-- Update the sum_rx removing the oldest sample and adding the new one
+						sum_lx <= sum_lx - samples_lx(wr_ptr_lx) + signed(s_axis_tdata);
 
 						s_axis_tlast_reg <= s_axis_tlast;
 					END IF;
