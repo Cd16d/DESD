@@ -1,8 +1,8 @@
 --Copyright 1986-2020 Xilinx, Inc. All Rights Reserved.
 ----------------------------------------------------------------------------------
 --Tool Version: Vivado v.2020.2 (win64) Build 3064766 Wed Nov 18 09:12:45 MST 2020
---Date        : Fri May 23 16:56:48 2025
---Host        : Davide-Samsung running 64-bit major release  (build 9200)
+--Date        : Mon May 26 12:51:36 2025
+--Host        : DavideASUS running 64-bit major release  (build 9200)
 --Command     : generate_target lab_3_wrapper.bd
 --Design      : lab_3_wrapper
 --Purpose     : IP block netlist
@@ -48,6 +48,7 @@ architecture STRUCTURE of lab_3_wrapper is
     tx_mclk_0 : out STD_LOGIC;
     lfo_enable : in STD_LOGIC;
     effect : in STD_LOGIC;
+    LED : out STD_LOGIC_VECTOR ( 15 downto 0 );
     SPI_M_0_sck_t : out STD_LOGIC;
     SPI_M_0_io1_o : out STD_LOGIC;
     SPI_M_0_ss_t : out STD_LOGIC;
@@ -59,8 +60,7 @@ architecture STRUCTURE of lab_3_wrapper is
     SPI_M_0_sck_o : out STD_LOGIC;
     SPI_M_0_ss_i : in STD_LOGIC;
     SPI_M_0_io1_i : in STD_LOGIC;
-    SPI_M_0_io0_i : in STD_LOGIC;
-    LED : out STD_LOGIC_VECTOR ( 15 downto 0 )
+    SPI_M_0_io0_i : in STD_LOGIC
   );
   end component lab_3;
   component IOBUF is

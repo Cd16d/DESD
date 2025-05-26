@@ -11,14 +11,14 @@
    </db_ref_list>
    <zoom_setting>
       <ZoomStartTime time="0fs"></ZoomStartTime>
-      <ZoomEndTime time="648001fs"></ZoomEndTime>
-      <Cursor1Time time="195000fs"></Cursor1Time>
+      <ZoomEndTime time="260201fs"></ZoomEndTime>
+      <Cursor1Time time="0fs"></Cursor1Time>
    </zoom_setting>
    <column_width_setting>
       <NameColumnWidth column_width="147"></NameColumnWidth>
-      <ValueColumnWidth column_width="93"></ValueColumnWidth>
+      <ValueColumnWidth column_width="88"></ValueColumnWidth>
    </column_width_setting>
-   <WVObjectSize size="13" />
+   <WVObjectSize size="18" />
    <wvobject fp_name="/tb_moving_average/aclk" type="logic">
       <obj_property name="ElementShortName">aclk</obj_property>
       <obj_property name="ObjectShortName">aclk</obj_property>
@@ -82,5 +82,27 @@
       <obj_property name="ObjectShortName">m_axis_tready</obj_property>
       <obj_property name="CustomSignalColor">#FFD700</obj_property>
       <obj_property name="UseCustomSignalColor">true</obj_property>
+   </wvobject>
+   <wvobject type="divider" fp_name="divider18">
+      <obj_property name="label">moving average</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_moving_average/dut/moving_avg_inst/sum_dx" type="array">
+      <obj_property name="ElementShortName">sum_dx[28:0]</obj_property>
+      <obj_property name="ObjectShortName">sum_dx[28:0]</obj_property>
+      <obj_property name="Radix">SIGNEDDECRADIX</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_moving_average/dut/moving_avg_inst/sum_sx" type="array">
+      <obj_property name="ElementShortName">sum_sx[28:0]</obj_property>
+      <obj_property name="ObjectShortName">sum_sx[28:0]</obj_property>
+      <obj_property name="Radix">SIGNEDDECRADIX</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_moving_average/dut/moving_avg_inst/wr_ptr_dx" type="other">
+      <obj_property name="ElementShortName">wr_ptr_dx</obj_property>
+      <obj_property name="ObjectShortName">wr_ptr_dx</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_moving_average/dut/moving_avg_inst/wr_ptr_sx" type="other">
+      <obj_property name="ElementShortName">wr_ptr_sx</obj_property>
+      <obj_property name="ObjectShortName">wr_ptr_sx</obj_property>
    </wvobject>
 </wave_config>

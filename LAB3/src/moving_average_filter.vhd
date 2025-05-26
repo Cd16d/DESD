@@ -41,13 +41,19 @@ ARCHITECTURE Behavioral OF moving_average_filter IS
 	SIGNAL sum_sx : signed(TDATA_WIDTH + FILTER_ORDER_POWER - 1 DOWNTO 0) := (OTHERS => '0');
 	SIGNAL wr_ptr_sx : INTEGER RANGE 0 TO FILTER_ORDER - 1 := 0;
 
+	-- Trigger signal to indicate when to output data
+	SIGNAL trigger : STD_LOGIC := '0';
+
+	-- Output signals
+	SIGNAL s_axis_tready_int : STD_LOGIC := '0';
+	SIGNAL s_axis_tlast_reg : STD_LOGIC := '0';
 	SIGNAL m_axis_tvalid_int : STD_LOGIC := '0';
 
 BEGIN
 
 	-- Assigning the output signals
 	m_axis_tvalid <= m_axis_tvalid_int;
-	s_axis_tready <= (m_axis_tready OR NOT m_axis_tvalid_int) AND aresetn;
+	s_axis_tready <= s_axis_tready_int;
 
 	PROCESS (aclk)
 	BEGIN
@@ -62,6 +68,8 @@ BEGIN
 				wr_ptr_dx <= 0;
 				wr_ptr_sx <= 0;
 
+				s_axis_tlast_reg <= '0';
+				s_axis_tready_int <= '0';
 				m_axis_tvalid_int <= '0';
 				m_axis_tlast <= '0';
 
@@ -71,10 +79,41 @@ BEGIN
 					m_axis_tvalid_int <= '0';
 				END IF;
 
-				-- Get and process data
-				IF s_axis_tvalid = '1' AND m_axis_tready = '1' THEN
+				-- Data output logic
+				IF trigger = '1' AND (m_axis_tvalid_int = '0' OR m_axis_tready = '1') THEN
+					IF s_axis_tlast_reg = '1' THEN
+						m_axis_tdata <= STD_LOGIC_VECTOR(
+							resize(
+								shift_right(
+									sum_dx,
+									FILTER_ORDER_POWER
+								),
+								m_axis_tdata'length
+							)
+						);
 
-					IF s_axis_tlast = '1' THEN 
+					ELSE
+						m_axis_tdata <= STD_LOGIC_VECTOR(
+							resize(
+								shift_right(
+									sum_sx,
+									FILTER_ORDER_POWER
+								),
+								m_axis_tdata'length
+							)
+						);
+
+					END IF;
+					
+					m_axis_tlast <= s_axis_tlast_reg;
+
+					m_axis_tvalid_int <= '1';
+					trigger <= '0';
+				END IF;
+
+				-- Data input logic
+				IF s_axis_tvalid = '1' AND s_axis_tready_int = '1' THEN	
+					IF s_axis_tlast = '1' THEN
 						-- Right channel
 						-- Circular buffer overwrite oldest saple with the new one from next clk cycle
 						samples_dx(wr_ptr_dx) <= signed(s_axis_tdata);
@@ -85,16 +124,7 @@ BEGIN
 						-- Update the sum_dx removing the oldest sample and adding the new one
 						sum_dx <= sum_dx - samples_dx(wr_ptr_dx) + signed(s_axis_tdata);
 
-						-- Calculate the average and send it to the master interface
-						m_axis_tdata <= STD_LOGIC_VECTOR(
-							resize(
-								shift_right(
-									sum_dx - samples_dx(wr_ptr_dx) + signed(s_axis_tdata),
-									FILTER_ORDER_POWER
-								),
-								m_axis_tdata'length
-							)
-						);
+						s_axis_tlast_reg <= s_axis_tlast;
 					ELSE
 						-- Left channel
 						-- Circular buffer overwrite oldest saple with the new one from next clk cycle
@@ -106,22 +136,14 @@ BEGIN
 						-- Update the sum_dx removing the oldest sample and adding the new one
 						sum_sx <= sum_sx - samples_sx(wr_ptr_sx) + signed(s_axis_tdata);
 
-						-- Calculate the average and send it to the master interface
-						m_axis_tdata <= STD_LOGIC_VECTOR(
-							resize(
-								shift_right(
-									sum_sx - samples_sx(wr_ptr_sx) + signed(s_axis_tdata),
-									FILTER_ORDER_POWER
-								),
-								m_axis_tdata'length
-							)
-						);
+						s_axis_tlast_reg <= s_axis_tlast;
 					END IF;
 
-					m_axis_tvalid_int <= '1';
-					m_axis_tlast <= s_axis_tlast;
+					trigger <= '1';
 
 				END IF;
+
+				s_axis_tready_int <= m_axis_tready OR NOT m_axis_tvalid_int;
 
 			END IF;
 
