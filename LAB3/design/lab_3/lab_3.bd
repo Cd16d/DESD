@@ -6,7 +6,8 @@
       "name": "lab_3",
       "rev_ctrl_bd_flag": "RevCtrlBdOff",
       "synth_flow_mode": "None",
-      "tool_version": "2020.2"
+      "tool_version": "2020.2",
+      "validated": "true"
     },
     "design_tree": {
       "clk_wiz_0": "",
@@ -39,8 +40,20 @@
         "type": "clk",
         "direction": "I",
         "parameters": {
+          "CLK_DOMAIN": {
+            "value": "lab_3_sys_clock",
+            "value_src": "default"
+          },
           "FREQ_HZ": {
             "value": "100000000"
+          },
+          "FREQ_TOLERANCE_HZ": {
+            "value": "0",
+            "value_src": "default"
+          },
+          "INSERT_VIP": {
+            "value": "0",
+            "value_src": "default"
           },
           "PHASE": {
             "value": "0.000"
@@ -51,6 +64,10 @@
         "type": "rst",
         "direction": "I",
         "parameters": {
+          "INSERT_VIP": {
+            "value": "0",
+            "value_src": "default"
+          },
           "POLARITY": {
             "value": "ACTIVE_HIGH"
           }
@@ -100,19 +117,19 @@
         "inst_hier_path": "clk_wiz_0",
         "parameters": {
           "CLKOUT1_JITTER": {
-            "value": "224.262"
+            "value": "149.337"
           },
           "CLKOUT1_PHASE_ERROR": {
-            "value": "296.868"
+            "value": "122.577"
           },
           "CLKOUT1_REQUESTED_OUT_FREQ": {
-            "value": "180"
+            "value": "100"
           },
           "CLKOUT2_JITTER": {
-            "value": "316.348"
+            "value": "201.826"
           },
           "CLKOUT2_PHASE_ERROR": {
-            "value": "296.868"
+            "value": "122.577"
           },
           "CLKOUT2_REQUESTED_OUT_FREQ": {
             "value": "22.579"
@@ -124,16 +141,16 @@
             "value": "sys_clock"
           },
           "MMCM_CLKFBOUT_MULT_F": {
-            "value": "49.500"
+            "value": "7.000"
           },
           "MMCM_CLKOUT0_DIVIDE_F": {
-            "value": "5.500"
+            "value": "7.000"
           },
           "MMCM_CLKOUT1_DIVIDE": {
-            "value": "44"
+            "value": "31"
           },
           "MMCM_DIVCLK_DIVIDE": {
-            "value": "5"
+            "value": "1"
           },
           "NUM_OUT_CLKS": {
             "value": "2"
@@ -184,7 +201,7 @@
                 "value_src": "constant"
               },
               "FREQ_HZ": {
-                "value": "180000000",
+                "value": "100000000",
                 "value_src": "ip_prop"
               },
               "PHASE": {
@@ -235,7 +252,7 @@
                 "value_src": "constant"
               },
               "FREQ_HZ": {
-                "value": "180000000",
+                "value": "100000000",
                 "value_src": "ip_prop"
               },
               "PHASE": {
@@ -288,7 +305,7 @@
                 "value_src": "constant"
               },
               "FREQ_HZ": {
-                "value": "180000000",
+                "value": "100000000",
                 "value_src": "ip_prop"
               },
               "PHASE": {
@@ -398,7 +415,7 @@
                 "value_src": "constant"
               },
               "FREQ_HZ": {
-                "value": "180000000",
+                "value": "100000000",
                 "value_src": "ip_prop"
               },
               "PHASE": {
@@ -464,7 +481,7 @@
                 "value_src": "constant"
               },
               "FREQ_HZ": {
-                "value": "180000000",
+                "value": "100000000",
                 "value_src": "ip_prop"
               },
               "PHASE": {
@@ -504,7 +521,7 @@
                 "value_src": "constant"
               },
               "FREQ_HZ": {
-                "value": "180000000",
+                "value": "100000000",
                 "value_src": "ip_prop"
               },
               "PHASE": {
@@ -613,7 +630,7 @@
                 "value_src": "constant"
               },
               "FREQ_HZ": {
-                "value": "180000000",
+                "value": "100000000",
                 "value_src": "ip_prop"
               },
               "PHASE": {
@@ -683,7 +700,7 @@
                 "value_src": "constant"
               },
               "FREQ_HZ": {
-                "value": "180000000",
+                "value": "100000000",
                 "value_src": "ip_prop"
               },
               "PHASE": {
@@ -731,7 +748,7 @@
                 "value_src": "constant"
               },
               "FREQ_HZ": {
-                "value": "180000000",
+                "value": "100000000",
                 "value_src": "ip_prop"
               },
               "PHASE": {
@@ -809,7 +826,7 @@
                 "value_src": "constant"
               },
               "FREQ_HZ": {
-                "value": "180000000",
+                "value": "100000000",
                 "value_src": "ip_prop"
               },
               "PHASE": {
@@ -879,7 +896,7 @@
                 "value_src": "constant"
               },
               "FREQ_HZ": {
-                "value": "180000000",
+                "value": "100000000",
                 "value_src": "ip_prop"
               },
               "PHASE": {
@@ -927,7 +944,7 @@
                 "value_src": "constant"
               },
               "FREQ_HZ": {
-                "value": "180000000",
+                "value": "100000000",
                 "value_src": "ip_prop"
               },
               "PHASE": {
@@ -977,7 +994,7 @@
                 "value_src": "constant"
               },
               "FREQ_HZ": {
-                "value": "180000000",
+                "value": "100000000",
                 "value_src": "ip_prop"
               },
               "PHASE": {
@@ -1083,7 +1100,7 @@
                 "value_src": "constant"
               },
               "FREQ_HZ": {
-                "value": "180000000",
+                "value": "100000000",
                 "value_src": "ip_prop"
               },
               "PHASE": {
@@ -1131,7 +1148,7 @@
                 "value_src": "constant"
               },
               "FREQ_HZ": {
-                "value": "180000000",
+                "value": "100000000",
                 "value_src": "ip_prop"
               },
               "PHASE": {
@@ -1243,7 +1260,7 @@
                 "value_src": "constant"
               },
               "FREQ_HZ": {
-                "value": "180000000",
+                "value": "100000000",
                 "value_src": "ip_prop"
               },
               "PHASE": {
@@ -1313,7 +1330,7 @@
                 "value_src": "constant"
               },
               "FREQ_HZ": {
-                "value": "180000000",
+                "value": "100000000",
                 "value_src": "ip_prop"
               },
               "PHASE": {
@@ -1361,7 +1378,7 @@
                 "value_src": "constant"
               },
               "FREQ_HZ": {
-                "value": "180000000",
+                "value": "100000000",
                 "value_src": "ip_prop"
               },
               "PHASE": {
@@ -1435,6 +1452,18 @@
               "HAS_TLAST": {
                 "value": "1",
                 "value_src": "constant"
+              },
+              "FREQ_HZ": {
+                "value": "100000000",
+                "value_src": "ip_prop"
+              },
+              "PHASE": {
+                "value": "0.0",
+                "value_src": "ip_prop"
+              },
+              "CLK_DOMAIN": {
+                "value": "/clk_wiz_0_clk_out1",
+                "value_src": "ip_prop"
               }
             },
             "port_maps": {
@@ -1493,6 +1522,18 @@
               "HAS_TLAST": {
                 "value": "1",
                 "value_src": "constant"
+              },
+              "FREQ_HZ": {
+                "value": "100000000",
+                "value_src": "ip_prop"
+              },
+              "PHASE": {
+                "value": "0.0",
+                "value_src": "ip_prop"
+              },
+              "CLK_DOMAIN": {
+                "value": "/clk_wiz_0_clk_out1",
+                "value_src": "ip_prop"
               }
             },
             "port_maps": {
@@ -1529,6 +1570,18 @@
               "ASSOCIATED_RESET": {
                 "value": "aresetn",
                 "value_src": "constant"
+              },
+              "FREQ_HZ": {
+                "value": "100000000",
+                "value_src": "ip_prop"
+              },
+              "PHASE": {
+                "value": "0.0",
+                "value_src": "ip_prop"
+              },
+              "CLK_DOMAIN": {
+                "value": "/clk_wiz_0_clk_out1",
+                "value_src": "ip_prop"
               }
             }
           },
@@ -1598,6 +1651,18 @@
               "HAS_TLAST": {
                 "value": "1",
                 "value_src": "constant"
+              },
+              "FREQ_HZ": {
+                "value": "100000000",
+                "value_src": "ip_prop"
+              },
+              "PHASE": {
+                "value": "0.0",
+                "value_src": "ip_prop"
+              },
+              "CLK_DOMAIN": {
+                "value": "/clk_wiz_0_clk_out1",
+                "value_src": "ip_prop"
               }
             },
             "port_maps": {
@@ -1656,6 +1721,18 @@
               "HAS_TLAST": {
                 "value": "1",
                 "value_src": "constant"
+              },
+              "FREQ_HZ": {
+                "value": "100000000",
+                "value_src": "ip_prop"
+              },
+              "PHASE": {
+                "value": "0.0",
+                "value_src": "ip_prop"
+              },
+              "CLK_DOMAIN": {
+                "value": "/clk_wiz_0_clk_out1",
+                "value_src": "ip_prop"
               }
             },
             "port_maps": {
@@ -1692,6 +1769,18 @@
               "ASSOCIATED_RESET": {
                 "value": "aresetn",
                 "value_src": "constant"
+              },
+              "FREQ_HZ": {
+                "value": "100000000",
+                "value_src": "ip_prop"
+              },
+              "PHASE": {
+                "value": "0.0",
+                "value_src": "ip_prop"
+              },
+              "CLK_DOMAIN": {
+                "value": "/clk_wiz_0_clk_out1",
+                "value_src": "ip_prop"
               }
             }
           },
@@ -1735,28 +1824,10 @@
           "led_level_controller_0/s_axis"
         ]
       },
-      "axis_dual_i2s_0_m_axis": {
-        "interface_ports": [
-          "axis_dual_i2s_0/m_axis",
-          "moving_average_filte_0/s_axis"
-        ]
-      },
-      "axi4stream_spi_master_0_M_AXIS": {
-        "interface_ports": [
-          "axi4stream_spi_master_0/M_AXIS",
-          "digilent_jstk2_0/s_axis"
-        ]
-      },
       "mute_controller_0_m_axis": {
         "interface_ports": [
           "mute_controller_0/m_axis",
           "axis_broadcaster_0/S_AXIS"
-        ]
-      },
-      "moving_average_filte_0_m_axis": {
-        "interface_ports": [
-          "balance_controller_0/s_axis",
-          "moving_average_filte_0/m_axis"
         ]
       },
       "volume_controller_0_m_axis": {
@@ -1765,16 +1836,34 @@
           "LFO_0/s_axis"
         ]
       },
+      "axis_dual_i2s_0_m_axis": {
+        "interface_ports": [
+          "axis_dual_i2s_0/m_axis",
+          "moving_average_filte_0/s_axis"
+        ]
+      },
       "axis_broadcaster_0_M00_AXIS": {
         "interface_ports": [
           "axis_broadcaster_0/M00_AXIS",
           "axis_dual_i2s_0/s_axis"
         ]
       },
+      "moving_average_filte_0_m_axis": {
+        "interface_ports": [
+          "balance_controller_0/s_axis",
+          "moving_average_filte_0/m_axis"
+        ]
+      },
       "digilent_jstk2_0_m_axis": {
         "interface_ports": [
           "digilent_jstk2_0/m_axis",
           "axi4stream_spi_master_0/S_AXIS"
+        ]
+      },
+      "axi4stream_spi_master_0_M_AXIS": {
+        "interface_ports": [
+          "axi4stream_spi_master_0/M_AXIS",
+          "digilent_jstk2_0/s_axis"
         ]
       },
       "LFO_0_m_axis": {
