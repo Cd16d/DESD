@@ -100,7 +100,7 @@ BEGIN
 
         -- Imposta parametri iniziali
         lfo_enable <= '1';
-        lfo_period <= std_logic_vector(to_unsigned(1, JOYSTICK_LENGHT));
+        lfo_period <= std_logic_vector(to_unsigned(1023, JOYSTICK_LENGHT));
 
         WHILE TRUE LOOP
             -- Prepara il dato
@@ -134,10 +134,10 @@ BEGIN
     -- Simula backpressure abbassando m_axis_tready ogni tanto
     backpressure_proc : PROCESS
     BEGIN
-        WAIT FOR 60 ns;
+        WAIT FOR 200 ns;
         WAIT UNTIL rising_edge(aclk);
         m_axis_tready <= '0';
-        WAIT FOR 20 ns;
+        WAIT FOR 500 ns;
         WAIT UNTIL rising_edge(aclk);
         m_axis_tready <= '1';
         WAIT;
