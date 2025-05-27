@@ -50,7 +50,6 @@ ARCHITECTURE Behavioral OF LFO IS
 
     SIGNAL trigger : STD_LOGIC := '0';
 
-	SIGNAL s_axis_tready_int : STD_LOGIC := '0';
     SIGNAL s_axis_tlast_reg : STD_LOGIC := '0';
     SIGNAL m_axis_tdata_temp : SIGNED(CHANNEL_LENGHT + TRIANGULAR_COUNTER_LENGHT DOWNTO 0) := (OTHERS => '0');
     SIGNAL m_axis_tvalid_int : STD_LOGIC := '0';
@@ -59,7 +58,7 @@ BEGIN
 
     -- Assigning the output signals
 	m_axis_tvalid <= m_axis_tvalid_int;
-	s_axis_tready <= s_axis_tready_int;
+	s_axis_tready <= (m_axis_tready OR NOT m_axis_tvalid_int) AND aresetn;
 
     -- Optimized single process for LFO step and triangular waveform generation
     PROCESS (aclk)
@@ -118,7 +117,6 @@ BEGIN
 
             IF aresetn = '0' THEN
                 s_axis_tlast_reg <= '0';
-                s_axis_tready_int <= '0';
                 m_axis_tdata_temp <= (OTHERS => '0');
                 m_axis_tvalid_int <= '0';
                 m_axis_tlast <= '0';
@@ -148,7 +146,7 @@ BEGIN
 				END IF;
 
                 -- Data input logic
-				IF s_axis_tvalid = '1' AND s_axis_tready_int = '1' THEN	
+				IF s_axis_tvalid = '1' AND (m_axis_tready = '1' OR m_axis_tvalid_int = '0') THEN	
                     IF lfo_enable = '1' THEN
                         m_axis_tdata_temp <= signed(s_axis_tdata) * tri_counter;
                         s_axis_tlast_reg <= s_axis_tlast;
@@ -168,8 +166,6 @@ BEGIN
                     trigger <= '1';
 
                 END IF;
-
-                s_axis_tready_int <= m_axis_tready OR NOT m_axis_tvalid_int;
 
             END IF;
 

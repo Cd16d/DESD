@@ -90,6 +90,7 @@ BEGIN
     -- Stimulus process
     stim_proc : PROCESS
         VARIABLE data_cnt : INTEGER := 0;
+        VARIABLE lr_flag  : STD_LOGIC := '0'; -- '0' = SX, '1' = DX
     BEGIN
         -- Reset
         aresetn <= '0';
@@ -98,20 +99,48 @@ BEGIN
         WAIT FOR 10 ns;
 
         -- Imposta parametri iniziali
-        lfo_enable <= '1'; -- o '0' se vuoi testare la modalità bypass
-        lfo_period <= std_logic_vector(to_unsigned(512, JOYSTICK_LENGHT)); -- Valore fisso
+        lfo_enable <= '1';
+        lfo_period <= std_logic_vector(to_unsigned(1, JOYSTICK_LENGHT));
 
-        -- Loop infinito: invia dati ad ogni ciclo di clock
         WHILE TRUE LOOP
-            WAIT UNTIL rising_edge(aclk);
-            s_axis_tdata  <= std_logic_vector(to_signed(data_cnt, CHANNEL_LENGHT));
+            -- Prepara il dato
+            IF lr_flag = '0' THEN
+                -- SX: aggiungi +100
+                s_axis_tdata  <= std_logic_vector(to_signed(data_cnt + 100, CHANNEL_LENGHT));
+                s_axis_tlast  <= '0';
+            ELSE
+                -- DX: valore normale
+                s_axis_tdata  <= std_logic_vector(to_signed(data_cnt, CHANNEL_LENGHT));
+                s_axis_tlast  <= '1';
+            END IF;
             s_axis_tvalid <= '1';
-            s_axis_tlast  <= '0'; -- Puoi impostare a '1' ogni N campioni se vuoi testare tlast
 
-            IF s_axis_tready = '1' THEN
-                data_cnt := data_cnt + 1;
+            -- Attendi handshake
+            WAIT UNTIL rising_edge(aclk);
+            WHILE s_axis_tready = '0' LOOP
+                WAIT UNTIL rising_edge(aclk);
+            END LOOP;
+
+            -- Dopo handshake, aggiorna flag/counter
+            IF lr_flag = '0' THEN
+                lr_flag := '1'; -- prossimo sarà DX
+            ELSE
+                lr_flag := '0'; -- prossimo sarà SX
+                data_cnt := data_cnt + 1; -- passa al prossimo campione solo dopo DX
             END IF;
         END LOOP;
+    END PROCESS;
+
+    -- Simula backpressure abbassando m_axis_tready ogni tanto
+    backpressure_proc : PROCESS
+    BEGIN
+        WAIT FOR 60 ns;
+        WAIT UNTIL rising_edge(aclk);
+        m_axis_tready <= '0';
+        WAIT FOR 20 ns;
+        WAIT UNTIL rising_edge(aclk);
+        m_axis_tready <= '1';
+        WAIT;
     END PROCESS;
 
 END sim;
