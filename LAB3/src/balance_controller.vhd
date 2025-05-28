@@ -55,7 +55,7 @@ BEGIN
     s_axis_tready <= (m_axis_tready OR NOT m_axis_tvalid_int) AND aresetn;
 
     -- Balance calculation process
-    -- Converts balance knob position to attenuation levels for each channel
+    -- Converts joystick x-axis position to attenuation levels for each channel
     BALANCE_CALC : PROCESS (aclk)
     BEGIN
 

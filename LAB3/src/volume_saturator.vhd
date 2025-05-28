@@ -115,10 +115,5 @@ BEGIN
     -- 3. Reduces wide multiplication results back to standard audio format
     -- 4. Provides "soft limiting" behavior for volume control
     -- 5. Ensures compatibility with downstream audio processing blocks
-    --
-    -- Without saturation, volume amplification could cause:
-    -- - Mathematical overflow leading to sign bit flips
-    -- - Severe audio distortion (crackling, popping sounds)
-    -- - Invalid audio sample values outside the representable range
 
 END Behavioral;

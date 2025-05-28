@@ -99,7 +99,7 @@ BEGIN
                 valid_flag_stage1 <= '0';                     -- No valid data
                 last_flag_stage1 <= '0';                      -- Clear channel indicator
             ELSE
-                -- Calculate LFO period based on joystick input
+                -- Calculate LFO period based on joystick y-axis input
                 -- Joystick mapping:
                 -- 0-511: Faster than base frequency (shorter period)
                 -- 512: Base frequency (1kHz)

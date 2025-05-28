@@ -5,7 +5,6 @@ USE ieee.numeric_std.ALL;
 -- Entity: all_pass_filter
 -- Purpose: A pass-through filter that maintains the same interface and timing
 --          characteristics as a moving average filter but passes data unchanged.
---          This is useful for testing or as a baseline comparison.
 ENTITY all_pass_filter IS
     GENERIC (
         TDATA_WIDTH : POSITIVE := 24  -- Width of the data bus in bits

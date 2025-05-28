@@ -57,7 +57,7 @@ BEGIN
     s_axis_tready <= (m_axis_tready OR NOT m_axis_tvalid_int) AND aresetn;
 
     -- Volume to exponent conversion process
-    -- Converts joystick position to bit-shift amount for exponential volume scaling
+    -- Converts joystick y-axis position to bit-shift amount for exponential volume scaling
     PROCESS (aclk)
     BEGIN
 

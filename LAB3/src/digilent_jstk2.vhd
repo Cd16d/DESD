@@ -6,9 +6,7 @@ USE IEEE.STD_LOGIC_1164.ALL;
 --          Sends LED color commands and receives joystick/button data
 ENTITY digilent_jstk2 IS
     GENERIC (
-        DELAY_US : INTEGER := 225;          -- Delay (in microseconds) between two SPI packets
-                                            -- 25us required by SPI IP-Core doesn't work,
-                                            -- it requires another SPI clock cycle
+        DELAY_US : INTEGER := 25;           -- Delay (in microseconds) between two SPI packets
         CLKFREQ : INTEGER := 100_000_000;   -- Frequency of the aclk signal (in Hz)
         SPI_SCLKFREQ : INTEGER := 5_000     -- Frequency of the SPI SCLK clock signal (in Hz)
     );
@@ -44,9 +42,11 @@ ARCHITECTURE Behavioral OF digilent_jstk2 IS
     -- Command code for the SetLEDRGB command, see the JSTK2 datasheet
     CONSTANT CMDSETLEDRGB : STD_LOGIC_VECTOR(7 DOWNTO 0) := x"84";
 
-    -- Calculate delay in clock cycles based on microsecond delay and clock frequency
-    -- Important: You MUST wait between two SPI packets (see JSTK2 datasheet and SPI IP-Core README)
-    CONSTANT DELAY_CLK_CYCLES : INTEGER := DELAY_US * (CLKFREQ / 1_000_000);
+    -- Calculate delay in clock cycles: (delay_period + 1_SPI_clock_period) * clock_frequency
+    -- Uses integer arithmetic optimized to avoid truncation by performing multiplications before divisions
+    -- Formula: ((DELAY_US * SPI_SCLKFREQ + 1_000_000) * CLKFREQ) / (SPI_SCLKFREQ * 1_000_000)
+    -- This ensures proper timing between SPI packets as required by JSTK2 datasheet
+    CONSTANT DELAY_CLK_CYCLES : INTEGER := ((DELAY_US * SPI_SCLKFREQ + 1_000_000) * CLKFREQ) / (SPI_SCLKFREQ * 1_000_000);
 
     -- State machine type definitions
     TYPE tx_state_type IS (DELAY, SEND_CMD, SEND_RED, SEND_GREEN, SEND_BLUE, SEND_DUMMY);
