@@ -30,7 +30,7 @@ ARCHITECTURE sim OF tb_digilent_jstk2 IS
     -- Testbench constants
     CONSTANT CLKFREQ : INTEGER := 100_000_000;
     CONSTANT DELAY_US : INTEGER := 25;
-    CONSTANT SPI_SCLKFREQ : INTEGER := 66_666;
+    CONSTANT SPI_SCLKFREQ : INTEGER := 5_000;
     CONSTANT CMDSETLEDRGB : STD_LOGIC_VECTOR(7 DOWNTO 0) := x"84";
 
     -- Component declaration for digilent_jstk2

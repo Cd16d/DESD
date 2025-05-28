@@ -50,17 +50,19 @@ BEGIN
                 balance <= jstck_x;
 
                 -- Y-axis control depends on selected effect mode
+                -- Note: When switching between modes, the previous joystick values
+                -- are preserved in the non-active outputs (volume/lfo_period)
                 IF effect = '1' THEN
                     -- LFO Mode: Y-axis controls Low Frequency Oscillator period
                     -- Used for tremolo, vibrato, or other modulation effects
                     lfo_period <= jstck_y;
-                    -- Volume remains at last set value (not updated in LFO mode)
+                    -- Volume remains at last set value (preserved from previous volume mode)
 
                 ELSE
                     -- Volume/Balance Mode: Y-axis controls overall volume level
                     -- Traditional audio mixer control mode
                     volume <= jstck_y;
-                    -- LFO period remains at last set value (not updated in volume mode)
+                    -- LFO period remains at last set value (preserved from previous LFO mode)
 
                 END IF;
 
