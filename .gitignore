@@ -82,6 +82,6 @@ vivado*.backup.log
 # Other files
 **/test/*.zip
 **/test/*.exe
-**/test/*.spec
-**/test/dist/
-**/test/build/
+*.spec
+**/dist/
+**/build/

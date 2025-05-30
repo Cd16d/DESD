@@ -46,7 +46,7 @@ ARCHITECTURE Behavioral OF digilent_jstk2 IS
     -- Uses integer arithmetic optimized to avoid truncation by performing multiplications before divisions
     -- Formula: ((DELAY_US * SPI_SCLKFREQ + 1_000_000) * CLKFREQ) / (SPI_SCLKFREQ * 1_000_000)
     -- This ensures proper timing between SPI packets as required by JSTK2 datasheet
-    CONSTANT DELAY_CLK_CYCLES : INTEGER := ((DELAY_US * SPI_SCLKFREQ + 1_000_000) * CLKFREQ) / (SPI_SCLKFREQ * 1_000_000);
+    CONSTANT DELAY_CLK_CYCLES : INTEGER := ((DELAY_US * SPI_SCLKFREQ + 1_000_000) * CLKFREQ) / (SPI_SCLKFREQ * 1_000_000) + 1;
 
     -- State machine type definitions
     TYPE tx_state_type IS (DELAY, SEND_CMD, SEND_RED, SEND_GREEN, SEND_BLUE, SEND_DUMMY);
@@ -57,8 +57,8 @@ ARCHITECTURE Behavioral OF digilent_jstk2 IS
     SIGNAL rx_state : rx_state_type := JSTK_X_LOW;      -- Receive state machine current state
 
     -- Timing and data storage signals
-    SIGNAL tx_delay_counter : INTEGER := 0;             -- Counter for inter-packet delay timing
-    SIGNAL rx_cache : STD_LOGIC_VECTOR(7 DOWNTO 0);     -- Temporary storage for multi-byte data reception
+    SIGNAL tx_delay_counter : INTEGER RANGE 0 TO DELAY_CLK_CYCLES := 0;  -- Counter for inter-packet delay timing
+    SIGNAL rx_cache : STD_LOGIC_VECTOR(7 DOWNTO 0);                      -- Temporary storage for multi-byte data reception
 
 BEGIN
 
@@ -97,7 +97,7 @@ BEGIN
 
                     WHEN DELAY =>
                         -- Wait for required delay period between SPI transactions
-                        IF tx_delay_counter >= DELAY_CLK_CYCLES THEN
+                        IF tx_delay_counter = DELAY_CLK_CYCLES THEN
                             tx_delay_counter <= 0;     -- Reset counter
                             tx_state <= SEND_CMD;      -- Start new transmission
                         ELSE
