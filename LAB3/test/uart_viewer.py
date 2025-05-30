@@ -63,11 +63,11 @@ def receive_graph_mode(ser):
     # Load PNG directly
     png_path = r'LAB3\test\Color_circle_(RGB).png'
     img = Image.open(png_path).convert('RGB')
-    img = img.resize((127, 127), Image.LANCZOS)  # Ensure image is 127x127
+    img = img.resize((127, 127), Image.Resampling.LANCZOS)  # Ensure image is 127x127
     img_np = np.array(img)
 
     # Show the image as background
-    ax.imshow(img, extent=[0, 127, 0, 127], aspect='auto', zorder=0)
+    ax.imshow(img, extent=(0, 127, 0, 127), aspect='auto', zorder=0)
 
     sc = ax.scatter([point[0]], [point[1]], s=[size], zorder=1)
     ax.set_xlim(0, 127)
@@ -146,6 +146,7 @@ def send_mode(ser):
             print("\nChiusura modalità invio...")
             break
 
+ser = None
 try:
     mode = ""
     while mode not in ["r", "s", "g"]:
@@ -170,5 +171,5 @@ except KeyboardInterrupt:
 except serial.SerialException as e:
     print(f"Errore nella connessione seriale: {e}")
 finally:
-    if 'ser' in locals() and ser.is_open:
+    if ser is not None and ser.is_open:
         ser.close()
