@@ -43,10 +43,8 @@ ARCHITECTURE Behavioral OF digilent_jstk2 IS
     CONSTANT CMDSETLEDRGB : STD_LOGIC_VECTOR(7 DOWNTO 0) := x"84";
 
     -- Calculate delay in clock cycles: (delay_period + 1_SPI_clock_period) * clock_frequency
-    -- Uses integer arithmetic optimized to avoid truncation by performing multiplications before divisions
-    -- Formula: ((DELAY_US * SPI_SCLKFREQ + 1_000_000) * CLKFREQ) / (SPI_SCLKFREQ * 1_000_000)
     -- This ensures proper timing between SPI packets as required by JSTK2 datasheet
-    CONSTANT DELAY_CLK_CYCLES : INTEGER := ((DELAY_US * SPI_SCLKFREQ + 1_000_000) * CLKFREQ) / (SPI_SCLKFREQ * 1_000_000) + 1;
+    CONSTANT DELAY_CLK_CYCLES : INTEGER := (DELAY_US + 1_000_000 / SPI_SCLKFREQ) * (CLKFREQ / 1_000_000);
 
     -- State machine type definitions
     TYPE tx_state_type IS (DELAY, SEND_CMD, SEND_RED, SEND_GREEN, SEND_BLUE, SEND_DUMMY);
