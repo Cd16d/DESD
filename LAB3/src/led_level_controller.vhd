@@ -36,7 +36,6 @@ ARCHITECTURE Behavioral OF led_level_controller IS
     CONSTANT REFRESH_CYCLES : NATURAL := (refresh_time_ms * 1_000_000) / clock_period_ns;
 
     -- Audio processing signals
-    SIGNAL volume_value : signed(CHANNEL_LENGHT - 1 DOWNTO 0) := (OTHERS => '0');           -- Current audio sample (signed)
     SIGNAL abs_audio_left : unsigned(CHANNEL_LENGHT - 2 DOWNTO 0) := (OTHERS => '0');      -- Absolute value of left channel
     SIGNAL abs_audio_right : unsigned(CHANNEL_LENGHT - 2 DOWNTO 0) := (OTHERS => '0');     -- Absolute value of right channel
 
@@ -64,18 +63,16 @@ BEGIN
 
             IF aresetn = '0' THEN
                 -- Reset: Clear all audio processing signals
-                volume_value <= (OTHERS => '0');      -- Clear current sample
                 abs_audio_left <= (OTHERS => '0');    -- Clear left channel level
                 abs_audio_right <= (OTHERS => '0');   -- Clear right channel level
 
             ELSIF s_axis_tvalid = '1' THEN
                 -- Process new audio sample when valid data is available
                 sdata_signed := signed(s_axis_tdata);  -- Convert input to signed format
-                volume_value <= sdata_signed;          -- Store current sample
 
                 -- Absolute value calculation for amplitude detection
                 -- Handle two's complement signed numbers correctly
-                IF sdata_signed(CHANNEL_LENGHT - 1) = '1' THEN
+                IF s_axis_tdata(s_axis_tdata'high) = '1' THEN
                     -- Negative number: Take two's complement to get absolute value
                     abs_value := unsigned(-sdata_signed);
                 ELSE
@@ -145,19 +142,16 @@ BEGIN
                 -- Update LED display when refresh trigger is active
 
                 -- Combine left and right channel amplitudes
-                -- Resize both channels to full width before addition to prevent overflow
-                abs_audio_sum := resize(abs_audio_left, CHANNEL_LENGHT) + resize(abs_audio_right, CHANNEL_LENGHT);
+                abs_audio_sum := abs_audio_left + abs_audio_right;
 
-                -- Level calculation with automatic sensitivity scaling
-                IF (abs_audio_left = 0 AND abs_audio_right = 0) THEN
-                    -- Silence: No LEDs illuminated
+                -- Level calculation with linear scaling to get the best visual result
+                IF abs_audio_sum = 0 THEN
+                    -- Mute: No LEDs illuminated
                     temp_led_level := 0;
 
                 ELSE
-                    -- Audio present: Calculate LED level using logarithmic-like scaling
-                    -- Right shift by (CHANNEL_LENGHT - 4) provides automatic sensitivity adjustment
-                    -- The "1 +" ensures at least one LED is on when audio is present
-                    -- Shift amount determines sensitivity: larger shift = less sensitive
+                    -- Right shift by (CHANNEL_LENGHT - 4) to take in account only the most significant bits
+                    -- to scale the audio amplitude in a linear way to fit within the LED range
                     temp_led_level := 1 + to_integer(shift_right(abs_audio_sum, CHANNEL_LENGHT - 4));
 
                 END IF;
@@ -184,19 +178,5 @@ BEGIN
         END IF;
 
     END PROCESS;
-
-    -- LED Level Meter Operation Summary:
-    -- 1. Continuously samples stereo audio data
-    -- 2. Calculates absolute value (amplitude) for each channel
-    -- 3. Combines left and right channels for total signal strength
-    -- 4. Updates LED display at regular intervals (refresh_time_ms)
-    -- 5. Maps audio amplitude to number of illuminated LEDs
-    -- 6. Creates bar graph visualization with automatic sensitivity scaling
-    --
-    -- Leds Behavior:
-    -- - No audio: All LEDs off
-    -- - Low audio: Few LEDs illuminated (bottom of bar)
-    -- - High audio: Many LEDs illuminated (full bar)
-    -- - Overload: All LEDs illuminated (maximum indication)
 
 END Behavioral;

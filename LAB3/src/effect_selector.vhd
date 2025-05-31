@@ -1,5 +1,6 @@
 LIBRARY IEEE;
 USE IEEE.STD_LOGIC_1164.ALL;
+USE IEEE.NUMERIC_STD.ALL;
 
 -- Entity: effect_selector
 -- Purpose: Routes joystick input to different audio control parameters based on effect mode
@@ -14,7 +15,7 @@ ENTITY effect_selector IS
         aresetn : IN STD_LOGIC;   -- Active-low asynchronous reset
 
         -- Control and input signals
-        effect : IN STD_LOGIC;    -- Effect mode selector (0=volume/balance mode, 1=LFO/balance mode)
+        effect : IN STD_LOGIC;    -- Effect mode selector (0=volume/balance mode, 1=LFO)
         jstck_x : IN STD_LOGIC_VECTOR(JOYSTICK_LENGHT - 1 DOWNTO 0);  -- X-axis joystick position
         jstck_y : IN STD_LOGIC_VECTOR(JOYSTICK_LENGHT - 1 DOWNTO 0);  -- Y-axis joystick position
 
@@ -27,6 +28,8 @@ END effect_selector;
 
 ARCHITECTURE Behavioral OF effect_selector IS
 
+    constant JOYSTICK_DEFAULT : STD_LOGIC_VECTOR(JOYSTICK_LENGHT - 1 DOWNTO 0) := STD_LOGIC_VECTOR(to_unsigned(2 ** (JOYSTICK_LENGHT - 1), JOYSTICK_LENGHT)); -- Default joystick value
+    
 BEGIN
 
     -- Main control logic process
@@ -37,31 +40,33 @@ BEGIN
         IF rising_edge(aclk) THEN
 
             IF aresetn = '0' THEN
-                -- Reset all outputs to zero (minimum values)
-                volume <= (OTHERS => '0');      -- Minimum volume
-                balance <= (OTHERS => '0');     -- Full left balance
-                lfo_period <= (OTHERS => '0');  -- Minimum LFO period
+                -- Reset all outputs to default/center values
+                volume <= JOYSTICK_DEFAULT;      -- Default volume (center position)
+                balance <= JOYSTICK_DEFAULT;     -- Center balance position
+                lfo_period <= JOYSTICK_DEFAULT;  -- Default LFO period (center position)
 
             ELSE
                 -- Normal operation: Route joystick inputs based on effect mode
 
-                -- X-axis always controls balance regardless of mode
-                -- This provides consistent left/right audio balance control
-                balance <= jstck_x;
-
-                -- Y-axis control depends on selected effect mode
-                -- Note: When switching between modes, the previous joystick values
-                -- are preserved in the non-active outputs (volume/lfo_period)
+                -- Y-axis always controls different parameters based on effect mode
+                -- X-axis behavior differs between modes
+                -- Note: When switching between modes, some outputs are reset while others preserved
                 IF effect = '1' THEN
                     -- LFO Mode: Y-axis controls Low Frequency Oscillator period
                     -- Used for tremolo, vibrato, or other modulation effects
                     lfo_period <= jstck_y;
-                    -- Volume remains at last set value (preserved from previous volume mode)
+                    -- Volume remains at last set value (preserved from previous mode)
+
+                    -- Reset balance to center/default position when in LFO mode
+                    balance <= JOYSTICK_DEFAULT;  -- Reset balance to center position
 
                 ELSE
-                    -- Volume/Balance Mode: Y-axis controls overall volume level
+                    -- Volume/Balance Mode:
+                    -- Y-axis controls overall volume level
+                    -- X-axis controls left/right audio balance
                     -- Traditional audio mixer control mode
                     volume <= jstck_y;
+                    balance <= jstck_x;
                     -- LFO period remains at last set value (preserved from previous LFO mode)
 
                 END IF;
