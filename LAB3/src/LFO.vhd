@@ -95,8 +95,8 @@ BEGIN
                 -- 0-511: Faster than base frequency (shorter period, higher frequency)
                 -- 512: Base frequency (1kHz)
                 -- 513-1023: Slower than base frequency (longer period, lower frequency)
-                step_clk_cycles_delta <= (to_integer(unsigned(lfo_period)) - JSTK_CENTER_VALUE) * ADJUSTMENT_FACTOR;
-                step_clk_cycles <= LFO_COUNTER_BASE_CLK_CYCLES - step_clk_cycles_delta;
+                step_clk_cycles_delta <= (to_integer(unsigned(lfo_period)) - JSTK_CENTER_VALUE);
+                step_clk_cycles <= LFO_COUNTER_BASE_CLK_CYCLES - step_clk_cycles_delta * ADJUSTMENT_FACTOR;
 
                 -- Generate triangular wave when LFO is enabled
                 IF lfo_enable = '1' THEN
