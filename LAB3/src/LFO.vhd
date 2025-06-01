@@ -92,9 +92,9 @@ BEGIN
             ELSE
                 -- Calculate LFO period based on joystick input
                 -- Joystick mapping:
-                -- 0-511: Faster than base frequency (shorter period, higher frequency)
+                -- 0-511: Slower than base frequency (longer period, lower frequency)
                 -- 512: Base frequency (1kHz)
-                -- 513-1023: Slower than base frequency (longer period, lower frequency)
+                -- 513-1023: Faster than base frequency (shorter period, higher frequency)
                 step_clk_cycles_delta <= (to_integer(unsigned(lfo_period)) - JSTK_CENTER_VALUE);
                 step_clk_cycles <= LFO_COUNTER_BASE_CLK_CYCLES - step_clk_cycles_delta * ADJUSTMENT_FACTOR;
 
