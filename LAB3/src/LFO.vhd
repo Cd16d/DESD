@@ -3,7 +3,7 @@ USE IEEE.STD_LOGIC_1164.ALL;
 USE IEEE.NUMERIC_STD.ALL;
 
 -- Entity: LFO (Low Frequency Oscillator) - Alternative Implementation
--- Purpose: Applies tremolo effect to audio by modulating amplitude with a triangular wave
+-- Purpose: Applies effect to audio by modulating amplitude with a triangular wave
 --          This is a simplified, single-process implementation compared to the pipelined version
 --          Provides real-time audio amplitude modulation for musical effects
 ENTITY LFO IS
@@ -24,13 +24,13 @@ ENTITY LFO IS
 
         -- Slave AXI Stream interface (audio input)
         s_axis_tvalid : IN STD_LOGIC;                                      -- Input data valid signal
-        s_axis_tdata : IN STD_LOGIC_VECTOR(CHANNEL_LENGHT - 1 DOWNTO 0);  -- Audio sample input
+        s_axis_tdata : IN STD_LOGIC_VECTOR(CHANNEL_LENGHT - 1 DOWNTO 0);   -- Audio sample input
         s_axis_tlast : IN STD_LOGIC;                                       -- Channel indicator (0=left, 1=right)
         s_axis_tready : OUT STD_LOGIC;                                     -- Ready to accept input data
 
         -- Master AXI Stream interface (audio output)
         m_axis_tvalid : OUT STD_LOGIC;                                     -- Output data valid signal
-        m_axis_tdata : OUT STD_LOGIC_VECTOR(CHANNEL_LENGHT - 1 DOWNTO 0); -- Modulated audio sample output
+        m_axis_tdata : OUT STD_LOGIC_VECTOR(CHANNEL_LENGHT - 1 DOWNTO 0);  -- Modulated audio sample output
         m_axis_tlast : OUT STD_LOGIC;                                      -- Channel indicator passthrough
         m_axis_tready : IN STD_LOGIC                                       -- Downstream ready signal
     );
@@ -57,7 +57,7 @@ ARCHITECTURE Behavioral OF LFO IS
 
     -- Triangular wave generation signals
     -- Note: Using signed counter with extra bit to handle full range calculations
-    SIGNAL tri_counter : SIGNED(TRIANGULAR_COUNTER_LENGHT DOWNTO 0) := (OTHERS => '0');  -- Triangular wave amplitude
+    SIGNAL tri_counter : SIGNED(TRIANGULAR_COUNTER_LENGHT DOWNTO 0) := (OTHERS => '0');   -- Triangular wave amplitude
     SIGNAL direction_up : STD_LOGIC := '1';                                               -- Wave direction: '1' = ascending, '0' = descending
 
     -- AXI4-Stream control signals
@@ -106,7 +106,7 @@ BEGIN
                         step_counter <= 0;  -- Reset counter for next period
 
                         -- Check for triangular wave direction changes at extremes
-                        -- Note: Using (2^n - 2) and 1 instead of (2^n - 1) and 0 to avoid edge cases
+                        -- Note: Using (2^n - 2) and 1 instead of (2^n - 1) and 0 due to process signal assignment
                         IF tri_counter = (2 ** TRIANGULAR_COUNTER_LENGHT) - 2 THEN
                             direction_up <= '0';  -- Switch to descending at near-maximum
 
@@ -180,8 +180,8 @@ BEGIN
                 -- Data input logic: Process new audio samples when available and output is ready
                 IF s_axis_tvalid = '1' AND (m_axis_tready = '1' OR m_axis_tvalid_int = '0') THEN	
                     IF lfo_enable = '1' THEN
-                        -- Apply LFO tremolo effect: multiply audio sample by triangular wave
-                        -- This creates amplitude modulation (tremolo effect)
+                        -- Apply LFO effect: multiply audio sample by triangular wave
+                        -- This creates amplitude modulation (effect)
                         m_axis_tdata_temp <= signed(s_axis_tdata) * tri_counter;
                         s_axis_tlast_reg <= s_axis_tlast;         -- Register channel indicator
 
@@ -212,11 +212,11 @@ BEGIN
 
     -- LFO Implementation Summary:
     -- 1. Generates triangular wave at frequency controlled by joystick input
-    -- 2. When enabled: multiplies audio samples by triangular wave (tremolo effect)
+    -- 2. When enabled: multiplies audio samples by triangular wave (multiplier value range from 0 to 1)
     -- 3. When disabled: passes audio through unchanged (bypass mode)
     -- 4. Uses proper AXI4-Stream handshaking for real-time audio processing
     --
-    -- Tremolo Effect Characteristics:
+    -- Effect Characteristics:
     -- - Frequency range: Approximately 0.1Hz to 10Hz (typical for audio LFO)
     -- - Modulation depth: Controlled by TRIANGULAR_COUNTER_LENGHT generic
     -- - Waveform: Triangular (linear amplitude changes, smooth transitions)

@@ -22,13 +22,13 @@ ENTITY moving_average_filter_en IS
 
         -- AXI4-Stream Slave Interface (Audio Input)
         s_axis_tvalid : IN STD_LOGIC;                                      -- Input data valid signal
-        s_axis_tdata : IN STD_LOGIC_VECTOR(TDATA_WIDTH - 1 DOWNTO 0);    -- Audio sample input
+        s_axis_tdata : IN STD_LOGIC_VECTOR(TDATA_WIDTH - 1 DOWNTO 0);      -- Audio sample input
         s_axis_tlast : IN STD_LOGIC;                                       -- Channel indicator (0=left, 1=right)
         s_axis_tready : OUT STD_LOGIC;                                     -- Ready to accept input data
 
         -- AXI4-Stream Master Interface (Audio Output)
         m_axis_tvalid : OUT STD_LOGIC;                                     -- Output data valid signal
-        m_axis_tdata : OUT STD_LOGIC_VECTOR(TDATA_WIDTH - 1 DOWNTO 0);   -- Audio sample output (filtered or unfiltered)
+        m_axis_tdata : OUT STD_LOGIC_VECTOR(TDATA_WIDTH - 1 DOWNTO 0);     -- Audio sample output (filtered or unfiltered)
         m_axis_tlast : OUT STD_LOGIC;                                      -- Channel indicator passthrough
         m_axis_tready : IN STD_LOGIC;                                      -- Downstream ready signal
 

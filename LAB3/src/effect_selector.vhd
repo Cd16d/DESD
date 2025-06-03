@@ -28,7 +28,7 @@ END effect_selector;
 
 ARCHITECTURE Behavioral OF effect_selector IS
 
-    constant JOYSTICK_DEFAULT : STD_LOGIC_VECTOR(JOYSTICK_LENGHT - 1 DOWNTO 0) := STD_LOGIC_VECTOR(to_unsigned(2 ** (JOYSTICK_LENGHT - 1), JOYSTICK_LENGHT)); -- Default joystick value
+    constant JOYSTICK_DEFAULT : STD_LOGIC_VECTOR(JOYSTICK_LENGHT - 1 DOWNTO 0) := STD_LOGIC_VECTOR(to_unsigned(2 ** (JOYSTICK_LENGHT - 1), JOYSTICK_LENGHT)); -- Default joystick value (center position for 10-bit joystick is 512)
     
 BEGIN
 
@@ -52,9 +52,11 @@ BEGIN
                 -- X-axis behavior differs between modes
                 -- Note: When switching between modes, some outputs are reset while others preserved
                 IF effect = '1' THEN
-                    -- LFO Mode: Y-axis controls Low Frequency Oscillator period
-                    -- Used for tremolo, vibrato, or other modulation effects
+                    -- LFO Mode:
+                    -- Y-axis controls Low Frequency Oscillator period
+                    -- X-axis is ignored in this mode
                     lfo_period <= jstck_y;
+
                     -- Volume remains at last set value (preserved from previous mode)
 
                     -- Reset balance to center/default position when in LFO mode
@@ -64,9 +66,9 @@ BEGIN
                     -- Volume/Balance Mode:
                     -- Y-axis controls overall volume level
                     -- X-axis controls left/right audio balance
-                    -- Traditional audio mixer control mode
                     volume <= jstck_y;
                     balance <= jstck_x;
+
                     -- LFO period remains at last set value (preserved from previous LFO mode)
 
                 END IF;

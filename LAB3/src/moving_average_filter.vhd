@@ -3,7 +3,7 @@ USE IEEE.STD_LOGIC_1164.ALL;
 USE ieee.numeric_std.ALL;
 
 -- Entity: moving_average_filter
--- Purpose: Implements a finite impulse response (FIR) low-pass filter using moving average
+-- Purpose: Implements a moving average filter for audio data
 --          Maintains separate circular buffers for left and right audio channels
 --          Filter order is configurable as 2^(FILTER_ORDER_POWER) samples
 ENTITY moving_average_filter IS
@@ -21,13 +21,13 @@ ENTITY moving_average_filter IS
 
         -- AXI4-Stream Slave Interface (Audio Input)
         s_axis_tvalid : IN STD_LOGIC;                                      -- Input data valid signal
-        s_axis_tdata : IN STD_LOGIC_VECTOR(TDATA_WIDTH - 1 DOWNTO 0);    -- Audio sample input
+        s_axis_tdata : IN STD_LOGIC_VECTOR(TDATA_WIDTH - 1 DOWNTO 0);      -- Audio sample input
         s_axis_tlast : IN STD_LOGIC;                                       -- Channel indicator (0=left, 1=right)
         s_axis_tready : OUT STD_LOGIC;                                     -- Ready to accept input data
 
         -- AXI4-Stream Master Interface (Audio Output)
         m_axis_tvalid : OUT STD_LOGIC;                                     -- Output data valid signal
-        m_axis_tdata : OUT STD_LOGIC_VECTOR(TDATA_WIDTH - 1 DOWNTO 0);   -- Filtered audio sample output
+        m_axis_tdata : OUT STD_LOGIC_VECTOR(TDATA_WIDTH - 1 DOWNTO 0);     -- Filtered audio sample output
         m_axis_tlast : OUT STD_LOGIC;                                      -- Channel indicator passthrough
         m_axis_tready : IN STD_LOGIC                                       -- Downstream ready signal
     );
@@ -42,14 +42,14 @@ ARCHITECTURE Behavioral OF moving_average_filter IS
     TYPE sample_array IS ARRAY (0 TO FILTER_ORDER - 1) OF signed(TDATA_WIDTH - 1 DOWNTO 0);
 
     -- Right channel (RX) processing signals
-    SIGNAL samples_rx : sample_array := (OTHERS => (OTHERS => '0'));                        -- Circular buffer for right channel samples
+    SIGNAL samples_rx : sample_array := (OTHERS => (OTHERS => '0'));                          -- Circular buffer for right channel samples
     SIGNAL sum_rx : signed(TDATA_WIDTH + FILTER_ORDER_POWER - 1 DOWNTO 0) := (OTHERS => '0'); -- Running sum of right channel samples
-    SIGNAL wr_ptr_rx : INTEGER RANGE 0 TO FILTER_ORDER - 1 := 0;                            -- Write pointer for right channel buffer
+    SIGNAL wr_ptr_rx : INTEGER RANGE 0 TO FILTER_ORDER - 1 := 0;                              -- Write pointer for right channel buffer
 
     -- Left channel (LX) processing signals
-    SIGNAL samples_lx : sample_array := (OTHERS => (OTHERS => '0'));                        -- Circular buffer for left channel samples
+    SIGNAL samples_lx : sample_array := (OTHERS => (OTHERS => '0'));                          -- Circular buffer for left channel samples
     SIGNAL sum_lx : signed(TDATA_WIDTH + FILTER_ORDER_POWER - 1 DOWNTO 0) := (OTHERS => '0'); -- Running sum of left channel samples
-    SIGNAL wr_ptr_lx : INTEGER RANGE 0 TO FILTER_ORDER - 1 := 0;                            -- Write pointer for left channel buffer
+    SIGNAL wr_ptr_lx : INTEGER RANGE 0 TO FILTER_ORDER - 1 := 0;                              -- Write pointer for left channel buffer
 
     -- Control and interface signals
     SIGNAL trigger : STD_LOGIC := '0';           -- Trigger signal to indicate when to output filtered data

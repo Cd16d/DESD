@@ -21,13 +21,13 @@ ENTITY volume_controller IS
 
         -- AXI4-Stream Slave Interface (Audio Input)
         s_axis_tvalid : IN STD_LOGIC;                                      -- Input data valid signal
-        s_axis_tdata : IN STD_LOGIC_VECTOR(TDATA_WIDTH - 1 DOWNTO 0);    -- Audio sample input
+        s_axis_tdata : IN STD_LOGIC_VECTOR(TDATA_WIDTH - 1 DOWNTO 0);      -- Audio sample input
         s_axis_tlast : IN STD_LOGIC;                                       -- Channel indicator (0=left, 1=right)
         s_axis_tready : OUT STD_LOGIC;                                     -- Ready to accept input data
 
         -- AXI4-Stream Master Interface (Audio Output)
         m_axis_tvalid : OUT STD_LOGIC;                                     -- Output data valid signal
-        m_axis_tdata : OUT STD_LOGIC_VECTOR(TDATA_WIDTH - 1 DOWNTO 0);   -- Audio sample output (volume adjusted)
+        m_axis_tdata : OUT STD_LOGIC_VECTOR(TDATA_WIDTH - 1 DOWNTO 0);     -- Audio sample output (volume adjusted)
         m_axis_tlast : OUT STD_LOGIC;                                      -- Channel indicator passthrough
         m_axis_tready : IN STD_LOGIC;                                      -- Downstream ready signal
 
@@ -98,10 +98,10 @@ ARCHITECTURE Behavioral OF volume_controller IS
 
     -- Internal AXI4-Stream signals between multiplier and saturator
     -- These signals carry the wide multiplication results before saturation
-    SIGNAL int_axis_tvalid : STD_LOGIC;                                                                         -- Valid signal between stages
-    SIGNAL int_axis_tready : STD_LOGIC;                                                                         -- Ready signal between stages
+    SIGNAL int_axis_tvalid : STD_LOGIC;                                                                           -- Valid signal between stages
+    SIGNAL int_axis_tready : STD_LOGIC;                                                                           -- Ready signal between stages
     SIGNAL int_axis_tdata : STD_LOGIC_VECTOR(TDATA_WIDTH - 1 + 2 ** (VOLUME_WIDTH - VOLUME_STEP_2 - 1) DOWNTO 0); -- Wide data between stages
-    SIGNAL int_axis_tlast : STD_LOGIC;                                                                          -- Channel indicator between stages
+    SIGNAL int_axis_tlast : STD_LOGIC;                                                                            -- Channel indicator between stages
 
 BEGIN
 

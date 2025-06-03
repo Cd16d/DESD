@@ -16,17 +16,17 @@ ENTITY digilent_jstk2 IS
 
         -- AXI4-Stream Master Interface: Data going TO the SPI IP-Core (and so, to the JSTK2 module)
         m_axis_tvalid : OUT STD_LOGIC;                      -- Output data valid signal
-        m_axis_tdata : OUT STD_LOGIC_VECTOR(7 DOWNTO 0);   -- 8-bit data to send via SPI
+        m_axis_tdata : OUT STD_LOGIC_VECTOR(7 DOWNTO 0);    -- 8-bit data to send via SPI
         m_axis_tready : IN STD_LOGIC;                       -- SPI IP-Core ready to accept data
 
         -- AXI4-Stream Slave Interface: Data coming FROM the SPI IP-Core (and so, from the JSTK2 module)
         -- Note: There is no tready signal, so you must be always ready to accept incoming data, or it will be lost!
         s_axis_tvalid : IN STD_LOGIC;                       -- Input data valid signal
-        s_axis_tdata : IN STD_LOGIC_VECTOR(7 DOWNTO 0);    -- 8-bit data received via SPI
+        s_axis_tdata : IN STD_LOGIC_VECTOR(7 DOWNTO 0);     -- 8-bit data received via SPI
 
         -- Joystick and button values read from the JSTK2 module
-        jstk_x : OUT STD_LOGIC_VECTOR(9 DOWNTO 0);         -- X-axis joystick position (10-bit, 0-1023)
-        jstk_y : OUT STD_LOGIC_VECTOR(9 DOWNTO 0);         -- Y-axis joystick position (10-bit, 0-1023)
+        jstk_x : OUT STD_LOGIC_VECTOR(9 DOWNTO 0);          -- X-axis joystick position (10-bit, 0-1023)
+        jstk_y : OUT STD_LOGIC_VECTOR(9 DOWNTO 0);          -- Y-axis joystick position (10-bit, 0-1023)
         btn_jstk : OUT STD_LOGIC;                           -- Joystick button state (1=pressed)
         btn_trigger : OUT STD_LOGIC;                        -- Trigger button state (1=pressed)
 
@@ -44,7 +44,7 @@ ARCHITECTURE Behavioral OF digilent_jstk2 IS
 
     -- Calculate delay in clock cycles: (delay_period + 1_SPI_clock_period) * clock_frequency
     -- This ensures proper timing between SPI packets as required by JSTK2 datasheet
-    CONSTANT DELAY_CLK_CYCLES : INTEGER := (DELAY_US + 1_000_000 / SPI_SCLKFREQ) * (CLKFREQ / 1_000_000);
+    CONSTANT DELAY_CLK_CYCLES : INTEGER := (DELAY_US + 1_000_000 / SPI_SCLKFREQ) * (CLKFREQ / 1_000_000) - 1;
 
     -- State machine type definitions
     TYPE tx_state_type IS (DELAY, SEND_CMD, SEND_RED, SEND_GREEN, SEND_BLUE, SEND_DUMMY);
@@ -56,7 +56,7 @@ ARCHITECTURE Behavioral OF digilent_jstk2 IS
 
     -- Timing and data storage signals
     SIGNAL tx_delay_counter : INTEGER RANGE 0 TO DELAY_CLK_CYCLES := 0;  -- Counter for inter-packet delay timing
-    SIGNAL rx_cache : STD_LOGIC_VECTOR(7 DOWNTO 0);                      -- Temporary storage for multi-byte data reception
+    SIGNAL rx_cache : STD_LOGIC_VECTOR(s_axis_tdata'range);                      -- Temporary storage for multi-byte data reception
 
 BEGIN
 
@@ -80,7 +80,8 @@ BEGIN
         "01101001" WHEN SEND_DUMMY;         -- Dummy byte to complete 5-byte transaction
 
     -- TX State Machine: Sends LED color commands to JSTK2 module
-    -- Protocol: Command(1) + Red(1) + Green(1) + Blue(1) + Dummy(1) = 5 bytes total
+    -- Protocol: Command(1) + Red(1) + Green(1) + Blue(1) + Dummy(1) = 5 bytes total > Delay before next command
+    -- The delay is required by the JSTK datasheet to ensure proper timing between SPI transactions
     TX : PROCESS (aclk)
     BEGIN
         IF rising_edge(aclk) THEN

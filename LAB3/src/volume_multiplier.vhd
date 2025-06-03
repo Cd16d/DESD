@@ -19,15 +19,15 @@ ENTITY volume_multiplier IS
 
         -- AXI4-Stream Slave Interface (Audio Input)
         s_axis_tvalid : IN STD_LOGIC;                                      -- Input data valid signal
-        s_axis_tdata : IN STD_LOGIC_VECTOR(TDATA_WIDTH - 1 DOWNTO 0);    -- Audio sample input
+        s_axis_tdata : IN STD_LOGIC_VECTOR(TDATA_WIDTH - 1 DOWNTO 0);      -- Audio sample input
         s_axis_tlast : IN STD_LOGIC;                                       -- Channel indicator (0=left, 1=right)
         s_axis_tready : OUT STD_LOGIC;                                     -- Ready to accept input data
 
         -- AXI4-Stream Master Interface (Audio Output with extended width)
-        m_axis_tvalid : OUT STD_LOGIC;                                                                         -- Output data valid signal
+        m_axis_tvalid : OUT STD_LOGIC;                                                                           -- Output data valid signal
         m_axis_tdata : OUT STD_LOGIC_VECTOR(TDATA_WIDTH - 1 + 2 ** (VOLUME_WIDTH - VOLUME_STEP_2 - 1) DOWNTO 0); -- Extended width output data
-        m_axis_tlast : OUT STD_LOGIC;                                                                          -- Channel indicator passthrough
-        m_axis_tready : IN STD_LOGIC;                                                                          -- Downstream ready signal
+        m_axis_tlast : OUT STD_LOGIC;                                                                            -- Channel indicator passthrough
+        m_axis_tready : IN STD_LOGIC;                                                                            -- Downstream ready signal
 
         -- Volume control input
         volume : IN STD_LOGIC_VECTOR(VOLUME_WIDTH - 1 DOWNTO 0)  -- Volume level (0=minimum, 1023=maximum)
@@ -37,7 +37,7 @@ END volume_multiplier;
 ARCHITECTURE Behavioral OF volume_multiplier IS
 
     -- Calculate volume control parameters based on generics
-    CONSTANT VOLUME_STEPS : INTEGER := (2 ** (VOLUME_WIDTH - 1)) / (2 ** VOLUME_STEP_2) + 1; -- Number of volume steps (9 steps for 10-bit)
+    CONSTANT VOLUME_STEPS : INTEGER := (2 ** (VOLUME_WIDTH - 1)) / (2 ** VOLUME_STEP_2) + 1;  -- Number of volume steps (9 steps for 10-bit)
     CONSTANT VOL_MID : INTEGER := 2 ** (VOLUME_WIDTH - 1);                                    -- Center volume position (512 for 10-bit)
     CONSTANT DEAD_ZONE : INTEGER := (2 ** VOLUME_STEP_2) / 2;                                 -- Dead zone around center (32 for step size 64)
 
@@ -58,7 +58,7 @@ BEGIN
 
     -- Volume to exponent conversion process
     -- Converts joystick y-axis position to bit-shift amount for exponential volume scaling
-    PROCESS (aclk)
+    VOLUME_CALC : PROCESS (aclk)
     BEGIN
 
         IF rising_edge(aclk) THEN
@@ -78,6 +78,7 @@ BEGIN
                 -- volume = 0-479:    Negative exponent (attenuation, right shift)
                 -- volume = 480-543:  Zero exponent (unity gain, dead zone)
                 -- volume = 544-1023: Positive exponent (amplification, left shift)
+                
                 volume_exp_mult <= to_integer(
                     shift_right(
                         signed('0' & volume) - to_signed(VOL_MID - DEAD_ZONE, volume'length + 1),
@@ -89,11 +90,11 @@ BEGIN
 
         END IF;
 
-    END PROCESS;
+    END PROCESS VOLUME_CALC;
 
     -- AXI4-Stream data processing
     -- Applies exponential volume scaling using bit-shifting multiplication
-    PROCESS (aclk)
+    AXIS : PROCESS (aclk)
     BEGIN
 
         IF rising_edge(aclk) THEN
@@ -155,7 +156,7 @@ BEGIN
 
         END IF;
 
-    END PROCESS;
+    END PROCESS AXIS;
 
     -- Example scaling factors (VOLUME_STEP_2 = 6, 64 values per step):
     -- volume_exp_mult = -3: Divide by 8 (>>3)

@@ -20,14 +20,14 @@ ENTITY volume_saturator IS
         aresetn : IN STD_LOGIC;     -- Active-low asynchronous reset
 
         -- AXI4-Stream Slave Interface (Extended width input from multiplier)
-        s_axis_tvalid : IN STD_LOGIC;                                                                         -- Input data valid signal
+        s_axis_tvalid : IN STD_LOGIC;                                                                           -- Input data valid signal
         s_axis_tdata : IN STD_LOGIC_VECTOR(TDATA_WIDTH - 1 + 2 ** (VOLUME_WIDTH - VOLUME_STEP_2 - 1) DOWNTO 0); -- Wide input data from multiplier
-        s_axis_tlast : IN STD_LOGIC;                                                                          -- Channel indicator (0=left, 1=right)
-        s_axis_tready : OUT STD_LOGIC;                                                                        -- Ready to accept input data
+        s_axis_tlast : IN STD_LOGIC;                                                                            -- Channel indicator (0=left, 1=right)
+        s_axis_tready : OUT STD_LOGIC;                                                                          -- Ready to accept input data
 
         -- AXI4-Stream Master Interface (Original width output for audio)
         m_axis_tvalid : OUT STD_LOGIC;                                     -- Output data valid signal
-        m_axis_tdata : OUT STD_LOGIC_VECTOR(TDATA_WIDTH - 1 DOWNTO 0);   -- Saturated audio sample output
+        m_axis_tdata : OUT STD_LOGIC_VECTOR(TDATA_WIDTH - 1 DOWNTO 0);     -- Saturated audio sample output
         m_axis_tlast : OUT STD_LOGIC;                                      -- Channel indicator passthrough
         m_axis_tready : IN STD_LOGIC                                       -- Downstream ready signal
     );
@@ -82,12 +82,10 @@ BEGIN
                     
                     IF signed(s_axis_tdata) > signed(HIGHER_BOUND_VEC) THEN
                         -- Positive overflow: Clip to maximum positive value
-                        -- This prevents "wraparound" distortion from mathematical overflow
                         m_axis_tdata <= HIGHER_BOUND_VEC;
 
                     ELSIF signed(s_axis_tdata) < signed(LOWER_BOUND_VEC) THEN
                         -- Negative overflow: Clip to maximum negative value
-                        -- This prevents "wraparound" distortion from mathematical underflow
                         m_axis_tdata <= LOWER_BOUND_VEC;
 
                     ELSE
@@ -108,12 +106,5 @@ BEGIN
         END IF;
 
     END PROCESS;
-
-    -- Saturation Purpose and Benefits:
-    -- 1. Prevents audio distortion from mathematical overflow
-    -- 2. Maintains audio dynamic range within valid bit representation
-    -- 3. Reduces wide multiplication results back to standard audio format
-    -- 4. Provides "soft limiting" behavior for volume control
-    -- 5. Ensures compatibility with downstream audio processing blocks
 
 END Behavioral;

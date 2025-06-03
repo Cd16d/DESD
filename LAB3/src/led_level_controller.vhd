@@ -1,6 +1,7 @@
 LIBRARY IEEE;
 USE IEEE.STD_LOGIC_1164.ALL;
 USE IEEE.NUMERIC_STD.ALL;
+USE IEEE.MATH_REAL.ALL;
 
 -- Entity: led_level_controller
 -- Purpose: Audio level meter using LEDs to display real-time audio amplitude
@@ -34,7 +35,10 @@ ARCHITECTURE Behavioral OF led_level_controller IS
     -- Calculate clock cycles needed for LED refresh timing
     -- Formula: (refresh_time_ms * 1_000_000 ns/ms) / clock_period_ns
     -- Example: (1ms * 1,000,000) / 10ns = 100,000 cycles for 1ms refresh at 100MHz
-    CONSTANT REFRESH_CYCLES : INTEGER := (refresh_time_ms * 1_000_000) / clock_period_ns;
+    CONSTANT REFRESH_CYCLES : INTEGER := (refresh_time_ms * 1_000_000) / clock_period_ns - 1;
+
+    -- Calculate the number of bits needed to represent the number of LEDs
+    CONSTANT NUMLEDS_BITS :  INTEGER := INTEGER(ceil(log2(real(NUM_LEDS))));
 
     -- LED refresh timing control signals
     SIGNAL refresh_counter : INTEGER RANGE 0 TO REFRESH_CYCLES := 0; -- Counts clock cycles between LED updates
@@ -91,7 +95,7 @@ BEGIN
                 refresh_tick <= '0';
             ELSE
                 -- Normal operation: Count clock cycles and generate refresh tick
-                IF refresh_counter = REFRESH_CYCLES - 1 THEN
+                IF refresh_counter = REFRESH_CYCLES THEN
                     -- End of refresh period: Reset counter and generate tick pulse
                     refresh_counter <= 0;
                     refresh_tick <= '1'; -- Single clock cycle pulse for LED update
@@ -109,7 +113,7 @@ BEGIN
     -- Updates only when refresh_tick is active to maintain stable visual display
     PROCESS (aclk)
         VARIABLE combined_amp : UNSIGNED(CHANNEL_LENGHT - 1 DOWNTO 0); -- Combined amplitude of both channels
-        VARIABLE led_level : INTEGER RANGE 0 TO NUM_LEDS := 0; -- Calculated LED level for bar graph display
+        VARIABLE led_level : INTEGER RANGE 0 TO 2**NUMLEDS_BITS := 0; -- Calculated LED level for bar graph display
     BEGIN
         IF rising_edge(aclk) THEN
             IF aresetn = '0' THEN
@@ -123,6 +127,8 @@ BEGIN
                 -- Combine left and right channel amplitudes
                 -- The sum of the absolute values of both channels gives a measure of total audio energy.
                 -- RESIZE ensures the sum fits within the variable's bit width.
+                -- There isn't data loss here since both abs_l and abs_r are one bit shorter than combined_amp,
+                -- due to the absolute value operation.
                 combined_amp := RESIZE(abs_l + abs_r, combined_amp'LENGTH);
 
                 -- Normalize combined amplitude to LED scale (0 to NUM_LEDS)
@@ -130,7 +136,7 @@ BEGIN
                 -- For 24-bit audio, shifting by (CHANNEL_LENGHT - 4) reduces the range to approximately 4 bits (0-15).
                 -- Adding 1 ensures that at least one LED lights up for any non-zero audio input.
                 -- Example: For 24-bit input, 1 + (combined_amp >> 20) gives a range from 1 to 16.
-                led_level := 1 + to_integer(shift_right(combined_amp, CHANNEL_LENGHT - 4));
+                led_level := 1 + to_integer(shift_right(combined_amp, CHANNEL_LENGHT - NUMLEDS_BITS));
 
                 -- Saturation protection: Limit LED level to maximum available LEDs
                 -- Prevents overflow and ensures the LED index stays within bounds.

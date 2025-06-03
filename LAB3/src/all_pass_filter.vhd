@@ -4,7 +4,7 @@ USE ieee.numeric_std.ALL;
 
 -- Entity: all_pass_filter
 -- Purpose: A pass-through filter that maintains the same interface and timing
---          characteristics as a moving average filter but passes data unchanged.
+--          characteristics as the moving average filter but passes data unchanged.
 ENTITY all_pass_filter IS
     GENERIC (
         TDATA_WIDTH : POSITIVE := 24  -- Width of the data bus in bits
@@ -16,13 +16,13 @@ ENTITY all_pass_filter IS
 
         -- AXI4-Stream Slave Interface (Input)
         s_axis_tvalid : IN STD_LOGIC;                                      -- Input data valid signal
-        s_axis_tdata : IN STD_LOGIC_VECTOR(TDATA_WIDTH - 1 DOWNTO 0);    -- Input data
+        s_axis_tdata : IN STD_LOGIC_VECTOR(TDATA_WIDTH - 1 DOWNTO 0);      -- Input data
         s_axis_tlast : IN STD_LOGIC;                                       -- Input end-of-packet signal
         s_axis_tready : OUT STD_LOGIC;                                     -- Ready to accept input data
 
         -- AXI4-Stream Master Interface (Output)
         m_axis_tvalid : OUT STD_LOGIC;                                     -- Output data valid signal
-        m_axis_tdata : OUT STD_LOGIC_VECTOR(TDATA_WIDTH - 1 DOWNTO 0);   -- Output data
+        m_axis_tdata : OUT STD_LOGIC_VECTOR(TDATA_WIDTH - 1 DOWNTO 0);     -- Output data
         m_axis_tlast : OUT STD_LOGIC;                                      -- Output end-of-packet signal
         m_axis_tready : IN STD_LOGIC                                       -- Downstream ready signal
     );
@@ -36,9 +36,9 @@ ARCHITECTURE Behavioral OF all_pass_filter IS
     -- Internal slave interface signals
     SIGNAL s_axis_tready_int : STD_LOGIC := '0';   -- Internal ready signal for input
     SIGNAL s_axis_tlast_reg : STD_LOGIC := '0';    -- Registered version of input tlast
+    SIGNAL s_axis_tdata_reg : STD_LOGIC_VECTOR(TDATA_WIDTH - 1 DOWNTO 0) := (OTHERS => '0'); -- Temporary storage for input data
     
     -- Internal data storage and master interface signals
-    SIGNAL m_axis_tdata_temp : STD_LOGIC_VECTOR(TDATA_WIDTH - 1 DOWNTO 0) := (OTHERS => '0'); -- Temporary storage for input data
     SIGNAL m_axis_tvalid_int : STD_LOGIC := '0';   -- Internal valid signal for output
 
 BEGIN
@@ -66,10 +66,10 @@ BEGIN
             -- Asynchronous reset logic (active low)
             IF aresetn = '0' THEN
                 -- Reset all internal signals to known states
-                trigger <= '0';                        -- Clear data processing trigger
+                trigger <= '0';                       -- Clear data processing trigger
                 s_axis_tlast_reg <= '0';              -- Clear registered tlast
                 s_axis_tready_int <= '0';             -- Not ready to accept data during reset
-                m_axis_tdata_temp <= (OTHERS => '0'); -- Clear temporary data storage
+                s_axis_tdata_reg <= (OTHERS => '0');  -- Clear temporary data storage
                 m_axis_tvalid_int <= '0';             -- No valid data on output during reset
                 m_axis_tlast <= '0';                  -- Clear output tlast
 
@@ -88,7 +88,7 @@ BEGIN
                 -- (either no valid data pending OR downstream is ready)
                 IF trigger = '1' AND (m_axis_tvalid_int = '0' OR m_axis_tready = '1') THEN
                     -- Transfer stored data to output
-                    m_axis_tdata <= m_axis_tdata_temp;  -- Output the stored input data unchanged
+                    m_axis_tdata <= s_axis_tdata_reg;   -- Output the stored input data unchanged
                     m_axis_tlast <= s_axis_tlast_reg;   -- Output the registered tlast signal
                     
                     -- Set output control signals
@@ -101,7 +101,7 @@ BEGIN
                 IF s_axis_tvalid = '1' AND s_axis_tready_int = '1' THEN				
                     -- Store input signals for later output
                     s_axis_tlast_reg <= s_axis_tlast;   -- Register the tlast signal
-                    m_axis_tdata_temp <= s_axis_tdata;  -- Store input data (pass-through, no processing)
+                    s_axis_tdata_reg <= s_axis_tdata;   -- Store input data (pass-through, no processing)
                     
                     -- Set trigger to indicate data is ready for output
                     trigger <= '1';
