@@ -43,7 +43,7 @@
 *.wdf
 *.lpr
 *.bxml
-
+*.zip
 
 # Vivado project directories
 *.sim/
@@ -64,6 +64,8 @@ vivado_pid*.str
 vivado*.backup.jou
 vivado*.backup.log
 
+# Directories to ignore
+.venv
 
 # SDK workspace
 .sdk/
@@ -79,3 +81,7 @@ vivado*.backup.log
 
 # Other files
 **/test/*.zip
+**/test/*.exe
+*.spec
+**/dist/
+**/build/

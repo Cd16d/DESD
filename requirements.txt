@@ -1,0 +1,6 @@
+pyserial
+matplotlib
+pillow
+numpy
+tqdm
+scipy

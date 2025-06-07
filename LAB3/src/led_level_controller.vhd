@@ -1,60 +1,165 @@
-----------------------------------------------------------------------------------
--- Company: 
--- Engineer: 
--- 
--- Create Date: 22.05.2021 15:42:35
--- Design Name: 
--- Module Name: led_level_controller - Behavioral
--- Project Name: 
--- Target Devices: 
--- Tool Versions: 
--- Description: 
--- 
--- Dependencies: 
--- 
--- Revision:
--- Revision 0.01 - File Created
--- Additional Comments:
--- 
-----------------------------------------------------------------------------------
+LIBRARY IEEE;
+USE IEEE.STD_LOGIC_1164.ALL;
+USE IEEE.NUMERIC_STD.ALL;
+USE IEEE.MATH_REAL.ALL;
 
-
-library IEEE;
-use IEEE.STD_LOGIC_1164.ALL;
-
--- Uncomment the following library declaration if using
--- arithmetic functions with Signed or Unsigned values
-use IEEE.NUMERIC_STD.ALL;
-
--- Uncomment the following library declaration if instantiating
--- any Xilinx leaf cells in this code.
---library UNISIM;
---use UNISIM.VComponents.all;
-
-entity led_level_controller is
-    generic(
-        NUM_LEDS : positive := 16;
-        CHANNEL_LENGHT  : positive := 24;
-        refresh_time_ms: positive :=1;
-        clock_period_ns: positive :=10
+-- Entity: led_level_controller
+-- Purpose: Audio level meter using LEDs to display real-time audio amplitude
+--          Processes stereo audio samples and drives a bar graph LED display
+ENTITY led_level_controller IS
+    GENERIC (
+        NUM_LEDS : POSITIVE := 16; -- Number of LEDs in the level meter display
+        CHANNEL_LENGHT : POSITIVE := 24; -- Width of audio data (24-bit audio samples)
+        refresh_time_ms : POSITIVE := 1; -- LED refresh rate in milliseconds (1ms = 1kHz update rate)
+        clock_period_ns : POSITIVE := 10 -- System clock period in nanoseconds (10ns = 100MHz)
     );
-    Port (
-        
-        aclk			: in std_logic;
-        aresetn			: in std_logic;
-        
-        led    : out std_logic_vector(NUM_LEDS-1 downto 0);
+    PORT (
+        -- Clock and reset signals
+        aclk : IN STD_LOGIC; -- Main clock input
+        aresetn : IN STD_LOGIC; -- Active-low asynchronous reset
 
-        s_axis_tvalid	: in std_logic;
-        s_axis_tdata	: in std_logic_vector(CHANNEL_LENGHT-1 downto 0);
-        s_axis_tlast    : in std_logic;
-        s_axis_tready	: out std_logic
+        -- LED output array (bar graph display)
+        led : OUT STD_LOGIC_VECTOR(NUM_LEDS - 1 DOWNTO 0); -- LED control signals (1=on, 0=off)
 
+        -- AXI4-Stream Slave Interface (Audio Input)
+        s_axis_tvalid : IN STD_LOGIC; -- Input data valid signal
+        s_axis_tdata : IN STD_LOGIC_VECTOR(CHANNEL_LENGHT - 1 DOWNTO 0); -- Audio sample input
+        s_axis_tlast : IN STD_LOGIC; -- Channel indicator (0=right, 1=left)
+        s_axis_tready : OUT STD_LOGIC -- Always ready to accept data
     );
-end led_level_controller;
+END led_level_controller;
 
-architecture Behavioral of led_level_controller is
+ARCHITECTURE Behavioral OF led_level_controller IS
 
-begin
+    -- Calculate clock cycles needed for LED refresh timing
+    CONSTANT REFRESH_CYCLES : INTEGER := (refresh_time_ms * 1_000_000) / clock_period_ns - 1;
 
-end Behavioral;
+    -- Calculate the number of bits needed to represent the number of LEDs
+    CONSTANT NUMLEDS_BITS : INTEGER := INTEGER(ceil(log2(real(NUM_LEDS))));
+
+    -- LED refresh timing control signals
+    SIGNAL refresh_counter : INTEGER RANGE 0 TO REFRESH_CYCLES := 0; -- Counts clock cycles between LED updates
+    SIGNAL refresh_tick : STD_LOGIC := '0'; -- Pulse signal generated every refresh period
+
+    -- Audio amplitude storage for both stereo channels
+    -- Stores absolute values (magnitude) of left and right audio channels
+    SIGNAL abs_l : UNSIGNED(CHANNEL_LENGHT - 1 DOWNTO 0) := (OTHERS => '0'); -- Absolute left channel amplitude registers
+    SIGNAL combined_amp : UNSIGNED(CHANNEL_LENGHT - 1 DOWNTO 0) := (OTHERS => '0'); -- Combined amplitude for LED level calculation
+
+BEGIN
+
+    -- Always ready for AXI4-Stream input
+    s_axis_tready <= '1';
+
+    -- Capture absolute value of input sample for left/right channel
+    PROCESS (aclk)
+    BEGIN
+
+        IF rising_edge(aclk) THEN
+
+            IF aresetn = '0' THEN
+                -- Reset: Clear both channel amplitude registers
+                abs_l <= (OTHERS => '0');
+                combined_amp <= (OTHERS => '0');
+
+            ELSIF s_axis_tvalid = '1' THEN
+                -- Valid audio data received: Process the sample
+
+                -- Channel routing based on AXI4-Stream tlast signal
+                -- tlast = '1' indicates right channel, tlast = '0' indicates left channel
+                IF s_axis_tlast = '1' THEN
+                    -- Right channel: Combine left and right channel amplitudes
+                    -- RESIZE ensures the sum fits within the variable's bit width.
+                    -- There isn't data loss since both abs_l and abs(s_axis_tdata) are one bit shorter than combined_amp,
+                    -- due to the absolute value operation.
+                    combined_amp <= RESIZE(abs_l + UNSIGNED(ABS(SIGNED(s_axis_tdata))), combined_amp'LENGTH);
+
+                ELSE
+                    -- Left channel: Store absolute value of audio sample
+                    abs_l <= UNSIGNED(ABS(SIGNED(s_axis_tdata)));
+
+                END IF;
+
+            END IF;
+
+        END IF;
+
+    END PROCESS;
+
+    -- LED refresh tick generator
+    PROCESS (aclk)
+    BEGIN
+
+        IF rising_edge(aclk) THEN
+
+            IF aresetn = '0' THEN
+                -- Reset: Initialize counter and tick signal
+                refresh_counter <= 0;
+                refresh_tick <= '0';
+
+            ELSE
+                IF refresh_counter = REFRESH_CYCLES THEN
+                    refresh_counter <= 0;
+                    refresh_tick <= '1';
+
+                ELSE
+                    refresh_counter <= refresh_counter + 1;
+                    refresh_tick <= '0';
+
+                END IF;
+
+            END IF;
+
+        END IF;
+
+    END PROCESS;
+
+    -- LED level calculation and bar graph generation process
+    -- Combines left and right channel amplitudes and converts to LED display pattern
+    -- Updates only when refresh_tick is active to maintain stable visual display
+    PROCESS (aclk)
+
+        VARIABLE led_level : INTEGER RANGE 0 TO 2 ** NUMLEDS_BITS := 0;
+
+    BEGIN
+
+        IF rising_edge(aclk) THEN
+
+            IF aresetn = '0' THEN
+                -- Reset: Turn off all LEDs and reset level counter
+                led <= (OTHERS => '0');
+
+            ELSIF refresh_tick = '1' THEN
+                -- LED update cycle: Calculate new LED pattern based on audio amplitude
+
+                -- Linear scale to LED level conversion to get the best visual effect
+                IF combined_amp = 0 THEN
+                    led_level := 0; -- No audio signal, turn off all LEDs
+
+                ELSE
+                    led_level := 1 + to_integer(shift_right(combined_amp, CHANNEL_LENGHT - NUMLEDS_BITS));
+
+                END IF;
+
+                -- Saturation protection: Limit LED level to maximum available LEDs
+                -- Prevents overflow and ensures the LED index stays within bounds.
+                IF led_level > NUM_LEDS THEN
+                    led_level := NUM_LEDS;
+
+                END IF;
+
+                -- Update LED output based on calculated level
+                led <= (OTHERS => '0');
+
+                IF led_level > 0 THEN
+                    led(led_level - 1 DOWNTO 0) <= (OTHERS => '1');
+
+                END IF;
+
+            END IF;
+
+        END IF;
+
+    END PROCESS;
+
+END Behavioral;

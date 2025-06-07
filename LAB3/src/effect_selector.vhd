@@ -1,54 +1,82 @@
-----------------------------------------------------------------------------------
--- Company: 
--- Engineer: 
--- 
--- Create Date: 04/29/2024 10:12:03 AM
--- Design Name: 
--- Module Name: effect_selector - Behavioral
--- Project Name: 
--- Target Devices: 
--- Tool Versions: 
--- Description: 
--- 
--- Dependencies: 
--- 
--- Revision:
--- Revision 0.01 - File Created
--- Additional Comments:
--- 
-----------------------------------------------------------------------------------
+LIBRARY IEEE;
+USE IEEE.STD_LOGIC_1164.ALL;
+USE IEEE.NUMERIC_STD.ALL;
 
-
-library IEEE;
-use IEEE.STD_LOGIC_1164.ALL;
-
--- Uncomment the following library declaration if using
--- arithmetic functions with Signed or Unsigned values
---use IEEE.NUMERIC_STD.ALL;
-
--- Uncomment the following library declaration if instantiating
--- any Xilinx leaf cells in this code.
---library UNISIM;
---use UNISIM.VComponents.all;
-
-entity effect_selector is
-    generic(
-        JOYSTICK_LENGHT  : integer := 10
+-- Entity: effect_selector
+-- Purpose: Routes joystick input to different audio control parameters based on effect mode
+--          Acts as a multiplexer/router for joystick control signals
+ENTITY effect_selector IS
+    GENERIC (
+        JOYSTICK_LENGHT : INTEGER := 10  -- Width of joystick position data (10-bit = 0-1023 range)
     );
-    Port (
-        aclk : in STD_LOGIC;
-        aresetn : in STD_LOGIC;
-        effect : in STD_LOGIC;
-        jstck_x : in STD_LOGIC_VECTOR(JOYSTICK_LENGHT-1 downto 0);
-        jstck_y : in STD_LOGIC_VECTOR(JOYSTICK_LENGHT-1 downto 0);
-        volume : out STD_LOGIC_VECTOR(JOYSTICK_LENGHT-1 downto 0);
-        balance : out STD_LOGIC_VECTOR(JOYSTICK_LENGHT-1 downto 0);
-        lfo_period : out STD_LOGIC_VECTOR(JOYSTICK_LENGHT-1 downto 0)
+    PORT (
+        -- Clock and reset signals
+        aclk : IN STD_LOGIC;      -- Main clock input
+        aresetn : IN STD_LOGIC;   -- Active-low asynchronous reset
+
+        -- Control and input signals
+        effect : IN STD_LOGIC;    -- Effect mode selector (0=volume/balance mode, 1=LFO)
+        jstck_x : IN STD_LOGIC_VECTOR(JOYSTICK_LENGHT - 1 DOWNTO 0);  -- X-axis joystick position
+        jstck_y : IN STD_LOGIC_VECTOR(JOYSTICK_LENGHT - 1 DOWNTO 0);  -- Y-axis joystick position
+
+        -- Output control parameters
+        volume : OUT STD_LOGIC_VECTOR(JOYSTICK_LENGHT - 1 DOWNTO 0);     -- Volume control output
+        balance : OUT STD_LOGIC_VECTOR(JOYSTICK_LENGHT - 1 DOWNTO 0);    -- Balance control output
+        lfo_period : OUT STD_LOGIC_VECTOR(JOYSTICK_LENGHT - 1 DOWNTO 0)  -- LFO period control output
     );
-end effect_selector;
+END effect_selector;
 
-architecture Behavioral of effect_selector is
+ARCHITECTURE Behavioral OF effect_selector IS
 
-begin
+    constant JOYSTICK_DEFAULT : STD_LOGIC_VECTOR(JOYSTICK_LENGHT - 1 DOWNTO 0) := STD_LOGIC_VECTOR(to_unsigned(2 ** (JOYSTICK_LENGHT - 1), JOYSTICK_LENGHT)); -- Default joystick value (center position for 10-bit joystick is 512)
+    
+BEGIN
 
-end Behavioral;
+    -- Main control logic process
+    -- Routes joystick axes to appropriate audio control parameters based on selected mode
+    PROCESS (aclk)
+    BEGIN
+
+        IF rising_edge(aclk) THEN
+
+            IF aresetn = '0' THEN
+                -- Reset all outputs to default/center values
+                volume <= JOYSTICK_DEFAULT;      -- Default volume (center position)
+                balance <= JOYSTICK_DEFAULT;     -- Center balance position
+                lfo_period <= JOYSTICK_DEFAULT;  -- Default LFO period (center position)
+
+            ELSE
+                -- Normal operation: Route joystick inputs based on effect mode
+
+                -- Y-axis always controls different parameters based on effect mode
+                -- X-axis behavior differs between modes
+                -- Note: When switching between modes, some outputs are reset while others preserved
+                IF effect = '1' THEN
+                    -- LFO Mode:
+                    -- Y-axis controls Low Frequency Oscillator period
+                    -- X-axis is ignored in this mode
+                    lfo_period <= jstck_y;
+
+                    -- Volume remains at last set value (preserved from previous mode)
+
+                    -- Reset balance to center/default position when in LFO mode
+                    balance <= JOYSTICK_DEFAULT;  -- Reset balance to center position
+
+                ELSE
+                    -- Volume/Balance Mode:
+                    -- Y-axis controls overall volume level
+                    -- X-axis controls left/right audio balance
+                    volume <= jstck_y;
+                    balance <= jstck_x;
+
+                    -- LFO period remains at last set value (preserved from previous LFO mode)
+
+                END IF;
+
+            END IF;
+
+        END IF;
+
+    END PROCESS;
+
+END Behavioral;
